@@ -1,68 +1,67 @@
-# Surface Urban Heat Island Intensity (SUHII) Mapping
+# 🌡️ SUHII Mapping
 
-`🇮🇹 Versione italiana sotto — Italian version below`
+> **Map urban heat islands anywhere in the world — using only free, open data.**
+
+`🇮🇹 Versione italiana più sotto — Italian version below`
 
 <p align="center">
-  <img src="shiny/www/scift.jpg" height="80" alt="Officina SCIFT logo"/>
+  <img src="shiny/www/scift.jpg" height="200" alt="Officina SCIFT logo"/>
 </p>
-
-> An open, reproducible tool for mapping surface urban heat islands from satellite
-> imagery and OpenStreetMap data — designed for researchers, urban planners,
-> administrators, and non-technical users alike.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 ---
 
-## What does this tool do?
+## What does it do?
 
-This tool automatically maps the **Surface Urban Heat Island Intensity (SUHII)**
-for any city in the world. It uses only free, open data:
+This tool automatically produces **Surface Urban Heat Island Intensity (SUHII)** maps for any city — no satellite expertise required.
 
-- **Landsat Collection 2 Level 2** — satellite thermal imagery via
-  [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/)
-  (no account required)
-- **OpenStreetMap** — land use and land cover data via Overpass API
-- **SRTM GL1 DEM** — elevation data via
-  [OpenTopography](https://opentopography.org/) (free API key required)
+```
+You type a city name  →  the tool does the rest  →  you get maps + report
+```
 
-It produces **interactive maps, charts, and a self-contained HTML report**
-suitable for sharing with non-technical audiences: city administrators,
-journalists, citizens, and students.
+It uses three free data sources — no accounts required except one free API key:
 
-> **Important — LST ≠ air temperature.**
-> This tool measures **Land Surface Temperature (LST)**: the radiometric skin
-> temperature of surfaces (asphalt, rooftops, soil) as seen from satellite.
-> It is not the air temperature you feel outside. See the report and the
-> app's About tab for a full explanation.
+| Data | Source | Account? |
+|:-----|:-------|:--------:|
+| 🛰️ Thermal satellite imagery | Landsat C2 L2 via Microsoft Planetary Computer | ✅ No |
+| 🗺️ Land use & urban areas | OpenStreetMap via Overpass API | ✅ No |
+| ⛰️ Elevation | SRTM GL1 DEM via OpenTopography | ⚠️ Free key needed |
+
+> **LST ≠ air temperature.**
+> The tool measures **Land Surface Temperature**: how hot surfaces (asphalt, rooftops, soil) get as seen from space — not the air temperature you feel outside.
 
 ---
 
-## Outputs
+## What you get
 
-For each city the workflow saves the following to `/data/<city>/Output/`:
+For each city, the tool saves these files to `data/<city>/Output/`:
 
-| File | Description |
-|:-----|:------------|
-| `warm_<year>_LST_MEAN.tif` | Mean seasonal Land Surface Temperature (°C) |
-| `warm_<year>_thermal_anomaly.tif` | LST anomaly vs rural reference (°C) |
-| `warm_<year>_SUHI.tif` | SUHII normalised index (0–1) |
-| `warm_<year>_anomaly_classified.tif` | 6-class severity raster |
-| `warm_<year>_priority_map.tif` | Intervention priority index (0–1) |
+| File | What it shows |
+|:-----|:-------------|
+| `warm_<year>_LST_MEAN.tif` | Average surface temperature (°C) |
+| `warm_<year>_thermal_anomaly.tif` | How much hotter urban is vs rural (°C) |
+| `warm_<year>_SUHI.tif` | Heat island intensity index (0–1) |
+| `warm_<year>_anomaly_classified.tif` | 6-class severity map |
+| `warm_<year>_priority_map.tif` | Where to intervene first (0–1) |
 | `warm_<year>_distance_green_areas.tif` | Distance from green areas (m) |
-| `warm_<year>_anomaly_classified.geojson` | Vector export for GIS |
-| `warm_<year>_priority_map.geojson` | Vector export for GIS |
+| `warm_<year>_anomaly_classified.geojson` | GIS vector export |
+| `warm_<year>_priority_map.geojson` | GIS vector export |
 | `warm_<year>_city_stats.csv` | Summary statistics |
-| `<city>_warm_<year>_report.html` | Full interactive HTML report |
+| `<city>_warm_<year>_report.html` | ✨ Full interactive HTML report |
 
 ---
 
-## Quick start — Docker
+## Getting started
 
-**You only need to install [Docker Desktop](https://www.docker.com/products/docker-desktop/).**
-No R, no RStudio, no other packages to install.
+### What you need
 
-### Step 1 — Download the repository
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — that's it. No R, no Python, no packages to install manually.
+- A free [OpenTopography API key](https://opentopography.org/developers) (takes 2 minutes to get).
+
+---
+
+### Step 1 — Download the project
 
 ```bash
 git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
@@ -71,15 +70,17 @@ cd SUHII_mapping
 
 Or download the ZIP from GitHub and extract it.
 
-### Step 2 — Get a free OpenTopography API key
+---
 
-1. Go to [opentopography.org](https://opentopography.org/developers)
-2. Register (free, immediate)
-3. Copy your API key from your profile page
+### Step 2 — Get your free API key
 
-### Step 3 — Add your credentials
+1. Go to [opentopography.org/developers](https://opentopography.org/developers)
+2. Register (free, takes 2 minutes)
+3. Copy the API key from your profile
 
-Copy the example file and fill in your key:
+---
+
+### Step 3 — Add the key to the project
 
 ```bash
 cp config/credentials.yml.example config/credentials.yml
@@ -89,62 +90,69 @@ Open `config/credentials.yml` and replace the placeholder:
 
 ```yaml
 opentopography:
-  api_key: "your-key-here"
+  api_key: "paste-your-key-here"
 ```
 
-> **Never commit `credentials.yml` to a public repository.**
-> It is already listed in `.gitignore`.
 
-### Step 4 — Build and start
 
-Open a terminal in the project folder and run:
+---
+
+### Step 4 — Build and launch
 
 ```bash
 docker-compose up --build
 ```
 
-> ⏳ **The first build takes 10–15 minutes** — this is normal and only happens once.
-> Docker is downloading R, Quarto, and all the required packages (~1 GB total).
-> You will see a long stream of installation messages scrolling in the terminal:
-> this is expected, not an error. **Do not close the terminal.**
+> ⏳ **The first build takes 10–15 minutes** — this happens only once.
+> Docker is downloading R, Quarto, and all required packages (~1 GB).
+> You will see a long stream of installation messages: this is normal, not an error.
+> **Do not close the terminal.**
 >
-> Once the build is complete, subsequent starts take under 30 seconds.
+> All subsequent starts take under 30 seconds.
 
-When you see:
+When you see this line in the terminal, the app is ready:
 
 ```
 suhii_app | [INFO] Starting listener on 0.0.0.0:3838
 ```
 
-the app is ready.
+---
 
 ### Step 5 — Open the app
 
-Open your browser at:
+👉 **[http://localhost:3838/suhii](http://localhost:3838/suhii)**
 
-**[http://localhost:3838/suhii](http://localhost:3838/suhii)**
+---
 
 ### Step 6 — Run an analysis
 
-1. Type a **city name** in the City field
-   (use the name as it appears in OpenStreetMap;
-   for small towns add the province: `Trofarello, Torino`)
+1. Type a **city name** (use the name as it appears in OpenStreetMap)
+   → For small towns, add the province: `Bologna, Emilia-Romagna`
 2. Click **Run analysis**
-3. Follow the progress log on the left sidebar
+3. Watch the progress log on the left sidebar
 
-A typical analysis takes **5–20 minutes** depending on city size and the
-number of available Landsat scenes.
+> ☕ **Go grab a coffee — this takes a few minutes.**
+>
+> A typical analysis runs in **5–20 minutes** depending on city size.
+> This is not a page loading: the tool is downloading satellite imagery,
+> processing it, and computing thermal maps from scratch.
+> The progress log keeps you updated while it works.
+> Large cities (e.g. Moscow) can take up to ~2 hours.
 
-### Step 7 — View and download results
+---
 
-When complete:
+### Step 7 — Explore your results
 
-- **Maps** tab — four interactive Leaflet maps
-- **Charts** tab — SUHII class distribution, urban vs rural LST comparison
-- **Report** tab — link to the full illustrated HTML report
-- **Downloads** tab — individual download buttons for every output file
+| Tab | What's there |
+|:----|:------------|
+| **Maps** | Four interactive Leaflet maps |
+| **Charts** | SUHII class distribution, urban vs rural LST |
+| **Report** | Full illustrated HTML report |
+| **Downloads** | Download buttons for every output file |
 
-All files are also saved in the `data/` folder on your machine.
+All files are also saved locally in the `data/` folder.
+
+---
 
 ### Step 8 — Stop the app
 
@@ -156,26 +164,73 @@ Your data in `data/` is preserved.
 
 ---
 
+## Troubleshooting
+
+**"Cannot geocode city"**
+→ The city name must match its OpenStreetMap entry exactly.
+Add the province for small towns: `Bologna, Emilia-Romagna`.
+Check at [nominatim.openstreetmap.org](https://nominatim.openstreetmap.org/).
+
+**"OpenTopography API key missing"**
+→ Check that `config/credentials.yml` exists and contains your key — not the placeholder text.
+
+**"No Landsat scenes found"**
+→ The warm-season window for this city may lack enough cloud-free scenes.
+This is normal for cities with persistent summer cloud cover.
+The tool only uses scenes with cloud cover ≤ 30%.
+
+**App does not start**
+→ Make sure Docker Desktop is running.
+Try `docker-compose down`, then `docker-compose up --build`.
+
+---
+
+## How it works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  0) User input     →  city name + local folder path             │
+├─────────────────────────────────────────────────────────────────┤
+│  1) Preliminary    →  load libraries, set bounding box,         │
+│     operations        detect warm season via Köppen-Geiger      │
+├─────────────────────────────────────────────────────────────────┤
+│  2) Data download  →  Landsat 8-9 (ST + QA bands)              │
+│                       Digital Elevation Model (SRTM)            │
+│                       Urban & rural areas (OpenStreetMap)       │
+├─────────────────────────────────────────────────────────────────┤
+│  3) Pre-processing →  cloud masking, offset & scaling,          │
+│                       LST conversion (°C), season mean          │
+├─────────────────────────────────────────────────────────────────┤
+│  4) Thermal        →  LST anomaly per 100 m elevation band      │
+│     anomaly           (urban LST − rural LST reference)         │
+├─────────────────────────────────────────────────────────────────┤
+│  5) SUHII index    →  normalized index (0–1)                    │
+│     + green access    distance from green urban areas map       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+The tool segments the city into **100 m elevation bands** and computes
+thermal anomalies within each band independently. This corrects for
+altitude differences between urban and rural areas, making results
+reliable for hilly and mountainous cities too.
+
+---
+
 ## Scientific basis
 
-### Classification thresholds (LST anomaly, °C)
+### Heat island severity classes
 
-The thermal anomaly raster is classified into six levels based on the
-**LST difference** between each urban pixel and the rural reference mean:
+| Class | LST anomaly vs rural |
+|:------|:-------------------:|
+| 🔵 Cool island | < 0 °C |
+| ⚪ Neutral | 0–1 °C |
+| 🟡 Weak | 1–2.5 °C |
+| 🟠 Moderate | 2.5–4.5 °C |
+| 🔴 Strong | 4.5–6.5 °C |
+| 🟣 Extreme | > 6.5 °C |
 
-| Class | LST anomaly | References |
-|:------|:-----------:|:-----------|
-| Cool island | < 0°C | Stewart & Oke (2012, BAMS) |
-| Neutral | 0–1°C | Chen et al. (2019, IJERPH) |
-| Weak | 1–2.5°C | Chen et al. (2019) |
-| Moderate | 2.5–4.5°C | Chen et al. (2019) |
-| Strong | 4.5–6.5°C | Chen et al. (2019) |
-| Extreme | > 6.5°C | Chen et al. (2019) |
-
-Global average daytime SUHII across 419 cities: **1.5 ± 1.2°C**
-(Peng et al. 2012, Environ. Sci. Technol.).
-
-Reminder: LST anomaly / 2 ≈ air temperature anomaly (Voogt & Oke 2003).
+Global average daytime SUHII across 419 cities: **1.5 ± 1.2 °C** (Peng et al. 2012).
+Rule of thumb: LST anomaly ÷ 2 ≈ air temperature anomaly (Voogt & Oke 2003).
 
 ### Intervention priority index
 
@@ -185,9 +240,8 @@ Priority = 0.50 × norm(thermal anomaly)
          + 0.20 × urban mask
 ```
 
-Urban pixels only. Weights follow Maragkogiannis et al. (2024) and
-Morabito et al. (2015, Sci Rep). Weights are declared explicitly in
-`R/functions/fn_outputs.R` and can be adjusted.
+Weights follow Maragkogiannis et al. (2024) and Morabito et al. (2015, Sci Rep).
+Adjustable in `R/functions/fn_outputs.R`.
 
 ### 3-30-300 rule
 
@@ -196,34 +250,38 @@ of the 3-30-300 rule (Konijnendijk 2022, J. For. Res. 34:821–830).
 
 ---
 
-## Troubleshooting
+## Performance
 
-**"Cannot geocode city"**
-→ Check the city name matches its OpenStreetMap entry.
-For small municipalities add the province: `Trofarello, Torino`.
-Verify at [nominatim.openstreetmap.org](https://nominatim.openstreetmap.org/).
+Tested on Windows 11 Pro — 32 GB RAM, AMD Ryzen 7 2700X 3.70 GHz — across 40 cities worldwide.
 
-**"OpenTopography API key missing"**
-→ Check that `config/credentials.yml` exists and contains your key,
-not the placeholder text.
+| Metric | Average | Range |
+|:-------|:-------:|:-----:|
+| ⏱️ Total processing time | ~11 min | 4 min – 2 h |
+| 💾 RAM usage | ~17 GB | up to ~27 GB |
+| 🗺️ Area processed | ~2 160 km² | varies widely |
 
-**"No Landsat scenes found"**
-→ The warm season window for the city may not have enough cloud-free scenes.
-This is normal for cities with persistent cloud cover in summer.
-The analysis uses all scenes with cloud cover ≤ 30%.
+Most of the time is spent on downloads, not computation:
 
-**App does not start**
-→ Make sure Docker Desktop is running.
-Try `docker-compose down` then `docker-compose up --build`.
+```
+OSM download      ████████████████░░░░  ~4.6 min
+Landsat download  ████████████████░░░░  ~4.6 min
+DEM download      █░░░░░░░░░░░░░░░░░░░  ~0.3 min
+LST processing    ██░░░░░░░░░░░░░░░░░░  ~0.5 min
+SUHII calculation ████░░░░░░░░░░░░░░░░  ~1.3 min
+Other             ░░░░░░░░░░░░░░░░░░░░  < 0.1 min
+```
+
+Large cities with extensive OSM data (e.g. Moscow) can reach ~120 min.
+Download time is not simply proportional to city area — it depends on how
+OpenStreetMap maps the area (aggregated polygons vs individual building footprints).
 
 ---
 
 ## Disclaimer
 
 All outputs are based on the associated peer-reviewed publication.
-Any use of these data — for analysis, modelling, visualisation, or
-incorporation into other projects — must include a citation to the
-original paper:
+Any use — for analysis, modelling, visualisation, or integration into other
+projects — must cite the original paper:
 
 > Richiardi, C., Caroscio, L., Crescini, E., De Marchi, M., De Pieri, G. M.,
 > Ceresi, C., Baldo, F., Francobaldi, M., & Pappalardo, S. E. (2025).
@@ -232,38 +290,26 @@ original paper:
 > *Sustainable Geosciences: People, Planet and Prosperity*, 100006.
 > [https://doi.org/10.1016/j.susgeo.2025.100006](https://doi.org/10.1016/j.susgeo.2025.100006)
 
-Failure to cite the original publication may constitute a breach of
-academic and professional standards.
-
 ---
 
 ## Project
 
-The project aligns with SDG 17 (Partnerships for the Goals) by fostering
-open, cross-sectoral collaboration through open science principles.
-Released under the **GNU General Public License v3.0 (GPL 3.0)**.
+Released under **GNU General Public License v3.0 (GPL 3.0)**.
+Aligns with **SDG 11** (Sustainable Cities) and **SDG 17** (Partnerships for the Goals).
 
 All code, data processing steps, and documentation are openly shared to
 facilitate collaboration across research institutions, policy sectors, and
-geographic regions. The repository is a living resource that encourages
-community contributions, interoperability between tools, and the co-creation
-of robust environmental analyses supporting evidence-based decision-making.
+geographic regions.
 
 ---
 
-## Feedback
+## 💬 Share your feedback
 
-We would love to hear how you are using the tool.
+We would love to hear how you are using this tool.
 
 👉 [Fill out the feedback form](https://docs.google.com/forms/d/e/1FAIpQLScuYIyojP9iiTP3vjk2wFNVpeEuBwITrGmT-Cp-hU-JH-i7mw/viewform?usp=sf_link)
 
-Filling it out means:
-- 🛠️ telling us what works and what we can improve
-- 🌍 contributing to an open and participatory knowledge process
-- 💬 helping us shape the community space we are building
-
-If you want to contribute — with code, ideas, feedback, or collaborations
-— you are welcome. Open an issue or submit a pull request.
+Want to contribute with code, ideas, or data? Open an issue or submit a pull request.
 
 ---
 
@@ -272,14 +318,16 @@ If you want to contribute — with code, ideas, feedback, or collaborations
 Developed by **[Officina SCIFT](https://municipiozero.it/scift/)** —
 Science, Craft, Innovation, Future, Technology.
 
-- 🌐 [municipiozero.it/scift](https://municipiozero.it/scift/)
-- 📷 [@scift_officina](https://www.instagram.com/scift_officina/)
-- ✉️ sciftofficina@protonmail.com
+🌐 [municipiozero.it/scift](https://municipiozero.it/scift/) · 
+📷 [@scift_officina](https://www.instagram.com/scift_officina/) · 
+✉️ sciftofficina@protonmail.com
 
 ---
 ---
 
-# Mappatura dell'intensità delle isole di calore urbane superficiali (SUHII)
+# 🌡️ Mappatura SUHII
+
+> **Mappa le isole di calore urbane in qualsiasi città del mondo — con soli dati aperti e gratuiti.**
 
 `(Versione italiana)`
 
@@ -287,61 +335,58 @@ Science, Craft, Innovation, Future, Technology.
   <img src="shiny/www/scift.jpg" height="80" alt="Logo Officina SCIFT"/>
 </p>
 
-> Uno strumento aperto e riproducibile per mappare le isole di calore urbane
-> superficiali a partire da immagini satellitari e dati OpenStreetMap —
-> pensato per ricercatori, urbanisti, amministratori e utenti non tecnici.
+---
+
+## Cosa fa?
+
+Produce automaticamente mappe di **Surface Urban Heat Island Intensity (SUHII)** per qualsiasi città — senza bisogno di competenze satellitari.
+
+```
+Scrivi il nome di una città  →  lo strumento fa tutto  →  ottieni mappe + report
+```
+
+Usa tre fonti di dati gratuite — nessun account necessario tranne una chiave API gratuita:
+
+| Dato | Fonte | Account? |
+|:-----|:------|:--------:|
+| 🛰️ Immagini termiche satellitari | Landsat C2 L2 via Microsoft Planetary Computer | ✅ No |
+| 🗺️ Uso del suolo e aree urbane | OpenStreetMap via Overpass API | ✅ No |
+| ⛰️ Quota altimetrica | SRTM GL1 DEM via OpenTopography | ⚠️ Chiave gratuita necessaria |
+
+> **LST ≠ temperatura dell'aria.**
+> Lo strumento misura la **Land Surface Temperature**: quanto si scaldano le superfici (asfalto, tetti, suolo) viste dallo spazio — non la temperatura percepita all'esterno.
 
 ---
 
-## Cosa fa questo strumento?
+## Cosa ottieni
 
-Mappa automaticamente la **Surface Urban Heat Island Intensity (SUHII)** per
-qualsiasi città nel mondo. Utilizza esclusivamente dati liberi e aperti:
+Per ogni città, i file vengono salvati in `data/<città>/Output/`:
 
-- **Landsat Collection 2 Level 2** — immagini termiche satellitari via
-  [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/)
-  (nessun account richiesto)
-- **OpenStreetMap** — uso del suolo via Overpass API
-- **SRTM GL1 DEM** — dati di quota via
-  [OpenTopography](https://opentopography.org/) (chiave API gratuita necessaria)
-
-Produce **mappe interattive, grafici e un report HTML autocontenuto**
-adatto a essere condiviso con pubblici non tecnici: amministratori locali,
-giornalisti, cittadini e studenti.
-
-> **Importante — LST ≠ temperatura dell'aria.**
-> Lo strumento misura la **Land Surface Temperature (LST)**: la temperatura
-> radiometrica delle superfici (asfalto, tetti, suolo) rilevata dal satellite.
-> Non è la temperatura dell'aria percepita all'esterno. Consulta il report e
-> la scheda "About" dell'app per una spiegazione completa.
-
----
-
-## Output
-
-Per ogni città il workflow salva i seguenti file in `/data/<città>/Output/`:
-
-| File | Descrizione |
-|:-----|:------------|
-| `warm_<anno>_LST_MEAN.tif` | LST media stagionale (°C) |
-| `warm_<anno>_thermal_anomaly.tif` | Anomalia LST rispetto all'area rurale (°C) |
-| `warm_<anno>_SUHI.tif` | Indice SUHII normalizzato (0–1) |
+| File | Cosa mostra |
+|:-----|:-----------|
+| `warm_<anno>_LST_MEAN.tif` | Temperatura superficiale media (°C) |
+| `warm_<anno>_thermal_anomaly.tif` | Quanto l'urbano è più caldo del rurale (°C) |
+| `warm_<anno>_SUHI.tif` | Indice di intensità dell'isola di calore (0–1) |
 | `warm_<anno>_anomaly_classified.tif` | Mappa di severità a 6 classi |
-| `warm_<anno>_priority_map.tif` | Indice di priorità di intervento (0–1) |
+| `warm_<anno>_priority_map.tif` | Dove intervenire prima (0–1) |
 | `warm_<anno>_distance_green_areas.tif` | Distanza dalle aree verdi (m) |
-| `warm_<anno>_anomaly_classified.geojson` | Export vettoriale per GIS |
-| `warm_<anno>_priority_map.geojson` | Export vettoriale per GIS |
+| `warm_<anno>_anomaly_classified.geojson` | Export vettoriale GIS |
+| `warm_<anno>_priority_map.geojson` | Export vettoriale GIS |
 | `warm_<anno>_city_stats.csv` | Statistiche di sintesi |
-| `<città>_warm_<anno>_report.html` | Report HTML interattivo completo |
+| `<città>_warm_<anno>_report.html` | ✨ Report HTML interattivo completo |
 
 ---
 
-## Guida rapida — Docker (consigliato, nessuna installazione necessaria)
+## Come iniziare
 
-**Serve solo installare [Docker Desktop](https://www.docker.com/products/docker-desktop/).**
-Nessun R, nessun RStudio, nessun pacchetto da installare.
+### Cosa ti serve
 
-### Passo 1 — Scarica la repository
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — tutto qui. Nessun R, nessun Python, nessun pacchetto da installare manualmente.
+- Una [chiave API OpenTopography](https://opentopography.org/developers) gratuita (ci vogliono 2 minuti).
+
+---
+
+### Passo 1 — Scarica il progetto
 
 ```bash
 git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
@@ -350,15 +395,17 @@ cd SUHII_mapping
 
 Oppure scarica lo ZIP da GitHub ed estrailo.
 
-### Passo 2 — Ottieni una chiave API OpenTopography gratuita
+---
 
-1. Vai su [opentopography.org](https://opentopography.org/developers)
-2. Registrati (gratuito, immediato)
-3. Copia la tua API key dalla pagina del profilo
+### Passo 2 — Ottieni la chiave API gratuita
 
-### Passo 3 — Inserisci le credenziali
+1. Vai su [opentopography.org/developers](https://opentopography.org/developers)
+2. Registrati (gratuito, 2 minuti)
+3. Copia la chiave API dalla pagina del tuo profilo
 
-Copia il file di esempio e inserisci la chiave:
+---
+
+### Passo 3 — Inserisci la chiave nel progetto
 
 ```bash
 cp config/credentials.yml.example config/credentials.yml
@@ -368,60 +415,69 @@ Apri `config/credentials.yml` con un editor di testo e sostituisci il placeholde
 
 ```yaml
 opentopography:
-  api_key: "la-tua-chiave-qui"
+  api_key: "incolla-la-tua-chiave-qui"
 ```
 
-> **Non committare mai `credentials.yml` su un repository pubblico.**
-> È già incluso nel `.gitignore`.
+
+
+---
 
 ### Passo 4 — Avvia il container
-
-Apri un terminale nella cartella del progetto ed esegui:
 
 ```bash
 docker-compose up --build
 ```
 
-> ⏳ **Il primo avvio richiede 10–15 minuti** — è normale e succede solo la prima volta.
-> Docker sta scaricando R, Quarto e tutti i pacchetti necessari (~1 GB in totale).
-> Nel terminale vedrai scorrere un lungo flusso di messaggi di installazione:
-> è tutto previsto, non è un errore. **Non chiudere il terminale.**
+> ⏳ **Il primo avvio richiede 10–15 minuti** — succede solo la prima volta.
+> Docker sta scaricando R, Quarto e tutti i pacchetti necessari (~1 GB).
+> Nel terminale scorre un lungo flusso di messaggi di installazione: è normale, non è un errore.
+> **Non chiudere il terminale.**
 >
-> Una volta completata la build, gli avvii successivi richiedono meno di 30 secondi.
+> Gli avvii successivi richiedono meno di 30 secondi.
 
-Quando vedi:
+Quando vedi questa riga nel terminale, l'app è pronta:
 
 ```
 suhii_app | [INFO] Starting listener on 0.0.0.0:3838
 ```
 
-l'app è pronta.
+---
 
-### Passo 5 — Apri l'app nel browser
+### Passo 5 — Apri l'app
 
-**[http://localhost:3838/suhii](http://localhost:3838/suhii)**
+👉 **[http://localhost:3838/suhii](http://localhost:3838/suhii)**
+
+---
 
 ### Passo 6 — Esegui un'analisi
 
-1. Scrivi il **nome della città** nel campo apposito
-   (usa il nome come appare in OpenStreetMap;
-   per comuni piccoli aggiungi la provincia: `Trofarello, Torino`)
+1. Scrivi il **nome della città** (usa il nome come appare in OpenStreetMap)
+   → Per comuni piccoli aggiungi la provincia: `Bologna, Emilia-Romagna`
 2. Clicca **Run analysis**
 3. Segui il log di avanzamento nella barra laterale sinistra
 
-Un'analisi tipica richiede **5–20 minuti** a seconda della dimensione della
-città e del numero di scene Landsat disponibili.
+> ☕ **Vai a farti un caffè — ci vogliono alcuni minuti.**
+>
+> Un'analisi tipica richiede **5–20 minuti** a seconda della dimensione della città.
+> Non è una pagina che si carica: lo strumento sta scaricando immagini satellitari,
+> elaborandole e calcolando le mappe termiche da zero.
+> Il log di avanzamento ti aggiorna in tempo reale.
+> Le città più grandi (es. Mosca) possono richiedere fino a ~2 ore.
 
-### Passo 7 — Visualizza e scarica i risultati
+---
 
-Al completamento:
+### Passo 7 — Esplora i risultati
 
-- Scheda **Maps** — quattro mappe Leaflet interattive
-- Scheda **Charts** — distribuzione delle classi SUHII, confronto urbano/rurale
-- Scheda **Report** — link al report HTML illustrato completo
-- Scheda **Downloads** — pulsanti di download per ogni file di output
+| Scheda | Cosa trovi |
+|:-------|:----------|
+| **Maps** | Quattro mappe Leaflet interattive |
+| **Charts** | Distribuzione classi SUHII, confronto urbano/rurale |
+| **Report** | Report HTML illustrato completo |
+| **Downloads** | Pulsanti di download per ogni file di output |
 
 Tutti i file sono salvati anche nella cartella `data/` sul tuo computer.
+
+---
 
 ### Passo 8 — Ferma l'app
 
@@ -436,18 +492,17 @@ I dati nella cartella `data/` vengono conservati.
 ## Risoluzione dei problemi
 
 **"Cannot geocode city"**
-→ Controlla che il nome della città corrisponda alla voce in OpenStreetMap.
-Per comuni piccoli aggiungi la provincia: `Trofarello, Torino`.
+→ Il nome della città deve corrispondere esattamente alla voce in OpenStreetMap.
+Per comuni piccoli aggiungi la provincia: `Bologna, Emilia-Romagna`.
 Verifica su [nominatim.openstreetmap.org](https://nominatim.openstreetmap.org/).
 
 **"OpenTopography API key missing"**
-→ Controlla che il file `config/credentials.yml` esista e contenga la tua
-chiave, non il testo placeholder.
+→ Controlla che il file `config/credentials.yml` esista e contenga la tua chiave — non il testo placeholder.
 
 **"No Landsat scenes found"**
-→ La finestra stagionale calda della città analizzata potrebbe non avere
-abbastanza scene prive di nuvole. È normale per città con copertura nuvolosa
-persistente in estate. L'analisi usa tutte le scene con cloud cover ≤ 30%.
+→ La finestra stagionale calda di questa città potrebbe non avere abbastanza scene prive di nuvole.
+È normale per città con copertura nuvolosa persistente in estate.
+Lo strumento usa solo scene con cloud cover ≤ 30%.
 
 **L'app non si avvia**
 → Verifica che Docker Desktop sia in esecuzione.
@@ -455,12 +510,103 @@ Prova `docker-compose down` e poi `docker-compose up --build`.
 
 ---
 
+## Come funziona
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  0) Input utente   →  nome città + cartella di lavoro           │
+├─────────────────────────────────────────────────────────────────┤
+│  1) Operazioni     →  carica librerie, bounding box,            │
+│     preliminari       rileva stagione calda via Köppen-Geiger   │
+├─────────────────────────────────────────────────────────────────┤
+│  2) Download dati  →  Landsat 8-9 (bande ST + QA)              │
+│                       Modello digitale del terreno (SRTM)       │
+│                       Aree urbane e rurali (OpenStreetMap)      │
+├─────────────────────────────────────────────────────────────────┤
+│  3) Pre-processing →  mascheratura nuvole, scaling,             │
+│                       conversione LST (°C), media stagionale    │
+├─────────────────────────────────────────────────────────────────┤
+│  4) Anomalia       →  LST anomaly per fascia altimetrica 100 m  │
+│     termica           (LST urbana − riferimento rurale)         │
+├─────────────────────────────────────────────────────────────────┤
+│  5) Indice SUHII   →  indice normalizzato (0–1)                 │
+│     + verde           mappa distanza dalle aree verdi           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Lo strumento divide la città in **fasce altimetriche da 100 m** e calcola le
+anomalie termiche indipendentemente per ciascuna fascia. Questo corregge le
+differenze di quota tra aree urbane e rurali, rendendo i risultati affidabili
+anche per città collinari e montane.
+
+---
+
+## Basi scientifiche
+
+### Classi di severità dell'isola di calore
+
+| Classe | Anomalia LST rispetto al rurale |
+|:-------|:-------------------------------:|
+| 🔵 Isola fresca | < 0 °C |
+| ⚪ Neutrale | 0–1 °C |
+| 🟡 Debole | 1–2,5 °C |
+| 🟠 Moderata | 2,5–4,5 °C |
+| 🔴 Forte | 4,5–6,5 °C |
+| 🟣 Estrema | > 6,5 °C |
+
+Media globale diurna su 419 città: **1,5 ± 1,2 °C** (Peng et al. 2012).
+Regola empirica: anomalia LST ÷ 2 ≈ anomalia temperatura dell'aria (Voogt & Oke 2003).
+
+### Indice di priorità di intervento
+
+```
+Priorità = 0,50 × norm(anomalia termica)
+          + 0,30 × norm(deficit accesso al verde)
+          + 0,20 × maschera urbana
+```
+
+Pesi da Maragkogiannis et al. (2024) e Morabito et al. (2015, Sci Rep).
+Modificabili in `R/functions/fn_outputs.R`.
+
+### Regola 3-30-300
+
+Lo strato di distanza dal verde implementa la componente dei 300 m di accessibilità
+della regola 3-30-300 (Konijnendijk 2022, J. For. Res. 34:821–830).
+
+---
+
+## Performance
+
+Testato su Windows 11 Pro — 32 GB RAM, AMD Ryzen 7 2700X 3,70 GHz — su 40 città nel mondo.
+
+| Metrica | Media | Range |
+|:--------|:-----:|:-----:|
+| ⏱️ Tempo totale di elaborazione | ~11 min | 4 min – 2 h |
+| 💾 Utilizzo RAM | ~17 GB | fino a ~27 GB |
+| 🗺️ Area processata | ~2 160 km² | molto variabile |
+
+La maggior parte del tempo è impiegata nei download, non nel calcolo:
+
+```
+Download OSM      ████████████████░░░░  ~4,6 min
+Download Landsat  ████████████████░░░░  ~4,6 min
+Download DEM      █░░░░░░░░░░░░░░░░░░░  ~0,3 min
+Elaborazione LST  ██░░░░░░░░░░░░░░░░░░  ~0,5 min
+Calcolo SUHII     ████░░░░░░░░░░░░░░░░  ~1,3 min
+Altro             ░░░░░░░░░░░░░░░░░░░░  < 0,1 min
+```
+
+Le città più grandi con molti dati OSM (es. Mosca) possono raggiungere ~120 min.
+Il tempo di download non è semplicemente proporzionale all'area — dipende da come
+OpenStreetMap mappa la zona (poligoni aggregati vs singoli edifici).
+
+---
+
 ## Disclaimer
 
 Tutti gli output si basano sulla pubblicazione scientifica associata.
-Qualsiasi utilizzo — per analisi, modellazioni, visualizzazioni o
-integrazione in altri progetti — deve includere la citazione del lavoro
-originale:
+Qualsiasi utilizzo — per analisi, modellazioni, visualizzazioni o integrazione
+in altri progetti — deve includere la citazione del lavoro originale:
 
 > Richiardi, C., Caroscio, L., Crescini, E., De Marchi, M., De Pieri, G. M.,
 > Ceresi, C., Baldo, F., Francobaldi, M., & Pappalardo, S. E. (2025).
@@ -469,40 +615,26 @@ originale:
 > *Sustainable Geosciences: People, Planet and Prosperity*, 100006.
 > [https://doi.org/10.1016/j.susgeo.2025.100006](https://doi.org/10.1016/j.susgeo.2025.100006)
 
-La mancata citazione della pubblicazione originale costituisce una violazione
-degli standard accademici e professionali.
-
 ---
 
 ## Progetto
 
-Il progetto si allinea con l'Obiettivo di Sviluppo Sostenibile n. 17
-(Partnership per gli obiettivi), promuovendo la collaborazione aperta e
-intersettoriale attraverso i principi della scienza aperta.
 Rilasciato sotto licenza **GNU General Public License v3.0 (GPL 3.0)**.
+Si allinea con **SDG 11** (Città sostenibili) e **SDG 17** (Partnership per gli obiettivi).
 
-Tutto il codice, i passaggi di elaborazione e la documentazione sono
-condivisi pubblicamente per facilitare la collaborazione tra istituzioni
-di ricerca, settori politici e regioni geografiche.
-La repository è una risorsa viva che incoraggia i contributi della comunità,
-l'interoperabilità tra strumenti e la co-creazione di analisi ambientali
-robuste a supporto di decisioni basate su evidenze scientifiche.
+Tutto il codice, i passaggi di elaborazione e la documentazione sono condivisi
+pubblicamente per facilitare la collaborazione tra istituzioni di ricerca,
+settori politici e regioni geografiche.
 
 ---
 
-## Feedback
+## 💬 Condividi il tuo feedback
 
-Ci piacerebbe sapere come utilizzi lo strumento.
+Ci piacerebbe sapere come stai utilizzando questo strumento.
 
 👉 [Compila il modulo di feedback](https://docs.google.com/forms/d/e/1FAIpQLScuYIyojP9iiTP3vjk2wFNVpeEuBwITrGmT-Cp-hU-JH-i7mw/viewform?usp=sf_link)
 
-Compilarlo significa:
-- 🛠️ indicarci cosa funziona e cosa possiamo migliorare
-- 🌍 contribuire a un processo aperto e partecipato di conoscenza
-- 💬 aiutarci a costruire lo spazio di dialogo che stiamo creando
-
-Se vuoi contribuire — con codice, idee, feedback o collaborazioni —
-sei benvenutə. Apri una issue o invia una pull request.
+Vuoi contribuire con codice, idee o dati? Apri una issue o invia una pull request.
 
 ---
 
@@ -511,6 +643,6 @@ sei benvenutə. Apri una issue o invia una pull request.
 Sviluppato da **[Officina SCIFT](https://municipiozero.it/scift/)** —
 Science, Craft, Innovation, Future, Technology.
 
-- 🌐 [municipiozero.it/scift](https://municipiozero.it/scift/)
-- 📷 [@scift_officina](https://www.instagram.com/scift_officina/)
-- ✉️ sciftofficina@protonmail.com
+🌐 [municipiozero.it/scift](https://municipiozero.it/scift/) · 
+📷 [@scift_officina](https://www.instagram.com/scift_officina/) · 
+✉️ sciftofficina@protonmail.com
