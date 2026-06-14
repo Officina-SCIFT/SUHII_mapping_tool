@@ -65,7 +65,7 @@ For each city, the tool saves these files to `data/<city>/Output/`:
 
 ```bash
 git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
-cd SUHII_mapping
+cd SUHII_mapping_tool
 ```
 
 Or download the ZIP from GitHub and extract it.
@@ -86,7 +86,7 @@ Or download the ZIP from GitHub and extract it.
 cp config/credentials.yml.example config/credentials.yml
 ```
 
-Open `config/credentials.yml` and replace the placeholder:
+Or open `config/credentials.yml` with a text editor (e.g. Notepad++) and replace the placeholder:
 
 ```yaml
 opentopography:
@@ -390,7 +390,7 @@ Per ogni città, i file vengono salvati in `data/<città>/Output/`:
 
 ```bash
 git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
-cd SUHII_mapping
+cd SUHII_mapping_tool
 ```
 
 Oppure scarica lo ZIP da GitHub ed estrailo.
@@ -411,7 +411,7 @@ Oppure scarica lo ZIP da GitHub ed estrailo.
 cp config/credentials.yml.example config/credentials.yml
 ```
 
-Apri `config/credentials.yml` con un editor di testo e sostituisci il placeholder:
+Oppure apri `config/credentials.yml` con un editor di testo (es. Notepad++) e sostituisci il placeholder:
 
 ```yaml
 opentopography:
