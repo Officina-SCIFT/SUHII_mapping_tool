@@ -57,10 +57,10 @@ For each city the workflow saves the following to `/data/<city>/Output/`:
 
 ---
 
-## Quick start — Docker (recommended, no installation needed)
+## Quick start — Docker
 
-**You only need [Docker Desktop](https://www.docker.com/products/docker-desktop/).**
-No R, no RStudio, no packages to install.
+**You only need to install [Docker Desktop](https://www.docker.com/products/docker-desktop/).**
+No R, no RStudio, no other packages to install.
 
 ### Step 1 — Download the repository
 
