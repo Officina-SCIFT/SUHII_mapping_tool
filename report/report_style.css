@@ -1,0 +1,80 @@
+/* ============================================================
+   SUHII Report — custom styles
+   Applies on top of the Quarto "cosmo" theme
+   ============================================================ */
+
+/* Typography */
+body {
+  font-family: "Inter", "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #2c2c2c;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+/* Sidebar TOC */
+#quarto-sidebar {
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+
+/* Callout boxes */
+.callout-note {
+  border-left-color: #4a90d9;
+}
+.callout-important {
+  border-left-color: #d73027;
+}
+
+/* Metric cards in the quick summary */
+.callout-note table {
+  font-size: 1rem;
+}
+.callout-note table td:last-child {
+  text-align: right;
+  font-weight: 600;
+}
+
+/* Leaflet maps */
+.leaflet-container {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  margin-bottom: 1.5rem;
+}
+
+/* Tables */
+table {
+  font-size: 0.9rem;
+}
+
+/* Figure captions */
+.figure-caption {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0.4rem;
+}
+
+/* Footer / appendix */
+#technical-appendix {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 6px;
+  margin-top: 2rem;
+}
+
+/* Reference list */
+#refs {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* Code blocks (collapsed by default) */
+details summary {
+  font-size: 0.82rem;
+  color: #555;
+}

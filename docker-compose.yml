@@ -1,0 +1,37 @@
+# =============================================================================
+# docker-compose.yml — SUHII Mapping Tool
+# =============================================================================
+#
+# Usage:
+#   docker-compose up --build      # first run (builds the image, ~10 min)
+#   docker-compose up              # subsequent runs (starts instantly)
+#   docker-compose down            # stop
+#
+# The app is available at:  http://localhost:3838/suhii
+#
+# Outputs are saved to the ./data folder on your machine.
+# =============================================================================
+
+version: "3.9"
+
+services:
+  suhii:
+    build: .
+    image: suhii-mapping:latest
+    container_name: suhii_app
+    ports:
+      - "3838:3838"       # Shiny Server port
+    volumes:
+      # Persist all output data on the host machine
+      - ./data:/data
+      # Mount credentials file (user fills this in on their machine)
+      - ./config/credentials.yml:/srv/shiny-server/suhii/config/credentials.yml:ro
+    environment:
+      # Where the app writes outputs inside the container
+      - SUHII_DATA_DIR=/data
+      # Shiny log level
+      - SHINY_LOG_LEVEL=WARN
+    restart: unless-stopped
+    # Resource limits — adjust for your machine
+    mem_limit: 8g
+    cpus: 4.0

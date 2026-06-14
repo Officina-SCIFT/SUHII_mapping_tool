@@ -1,0 +1,672 @@
+---
+title: "Surface Urban Heat Island Analysis"
+subtitle: "`r paste(params$city, '|', params$season, 'season', params$year)`"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+author: "SUHII Mapping Tool — Officina SCIFT"
+format:
+  html:
+    theme:           cosmo
+    toc:             true
+    toc-depth:       3
+    toc-title:       "Contents"
+    toc-location:    left
+    number-sections: true
+    embed-resources: true    # single self-contained HTML file
+    fig-width:       9
+    fig-height:      6
+    code-fold:       true
+    code-summary:    "Show code"
+    css:             report_style.css
+params:
+  city:          "Unknown"
+  city_slug:     "unknown"
+  season:        "warm"
+  year:          2024
+  start_date:    "2024-06-01"
+  end_date:      "2024-08-31"
+  max_cloud:     30
+  output_dir:    "."
+  koppen_class:     "Csa"
+  altitude_band_height: 100
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center"
+)
+
+# Packages (already loaded by run.R via 00_packages.R)
+library(terra)
+library(leaflet)
+library(leaflet.extras)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(scales)
+library(tibble)
+
+# ── Load all outputs ──────────────────────────────────────────────────────────
+out  <- params$output_dir
+slug <- params$city_slug
+seas <- params$season
+yr   <- params$year
+
+f <- function(...) file.path(out, sprintf(...))
+
+# Rasters
+lst_mean    <- terra::rast(f("%s_%d_LST_MEAN.tif",             seas, yr))
+anomaly     <- terra::rast(f("%s_%d_thermal_anomaly.tif",      seas, yr))
+suhi        <- terra::rast(f("%s_%d_SUHI.tif",                 seas, yr))
+classified  <- terra::rast(f("%s_%d_anomaly_classified.tif",   seas, yr))
+priority    <- terra::rast(f("%s_%d_priority_map.tif",         seas, yr))
+
+dist_path   <- f("%s_%d_distance_green_areas.tif", seas, yr)
+has_dist    <- file.exists(dist_path)
+if (has_dist) green_dist <- terra::rast(dist_path)
+
+# Statistics
+stats_path <- f("%s_%d_city_stats.csv", seas, yr)
+stats      <- read.csv(stats_path)
+
+# Classification labels and colours
+CLASS_LABELS <- c(
+  "Cool island",
+  "Neutral",
+  "Weak",
+  "Moderate",
+  "Strong",
+  "Extreme"
+)
+CLASS_BREAKS <- c(-Inf, 0, 1, 2.5, 4.5, 6.5, Inf)
+CLASS_COLOURS <- c("#4575b4","#ffffbf","#fee090","#f46d43","#d73027","#a50026")
+
+# Helper: project to WGS84 for leaflet
+to_wgs84 <- function(r) terra::project(r, "EPSG:4326")
+
+# Helper: format numbers with consistent rounding
+fmt1 <- function(x) formatC(round(x, 1), format = "f", digits = 1)
+fmt2 <- function(x) formatC(round(x, 2), format = "f", digits = 2)
+fmt0 <- function(x) formatC(round(x, 0), format = "f", digits = 0, big.mark = ",")
+
+# Pre-format the green deficit text (avoids complex inline if/else in a table cell)
+pct_green_txt <- if (is.na(stats$pct_urban_beyond_300m_green)) {
+  "N/A"
+} else {
+  paste0(stats$pct_urban_beyond_300m_green, "%")
+}
+```
+
+::: {.callout-note}
+## Quick summary
+
+**`r params$city`** — `r params$season` season **`r params$year`**
+(`r params$start_date` → `r params$end_date`, cloud cover ≤ `r params$max_cloud`%)
+
+| Indicator | Value |
+|:----------|------:|
+| Mean urban LST | **`r fmt1(stats$lst_mean_urban_C)` °C** |
+| Mean rural LST | **`r fmt1(stats$lst_mean_rural_C)` °C** |
+| Mean LST anomaly (SUHII) | **`r fmt1(stats$suhii_mean_C)` °C** |
+| Max LST anomaly | **`r fmt1(stats$suhii_max_C)` °C** |
+| Urban area beyond 300 m from green | **`r pct_green_txt`** |
+| Landsat scenes used | **`r stats$n_landsat_scenes`** |
+
+:::
+
+---
+
+# What is urban heat island?
+
+Urban areas are generally warmer than their surrounding countryside. This
+phenomenon — known as the **Urban Heat Island (UHI) effect** — arises because
+cities replace vegetated surfaces with impervious materials (asphalt, concrete,
+rooftops) that absorb more solar radiation, retain heat longer, and cannot cool
+through evaporation the way plants do. The absence of shade trees, the density
+of buildings that trap heat between facades, and the heat released by vehicles
+and air conditioners all amplify the effect.
+
+The consequences are real and measurable: higher energy consumption for cooling,
+reduced air quality, greater health risk during heatwaves (especially for elderly
+and low-income residents), and increased mortality. Studies estimate that UHI can
+increase peak urban electricity demand by 2–4% for every 1°C of warming above a
+threshold of 15–20°C [@akbari1995].
+
+This report focuses on the **surface** expression of the UHI, quantified from
+Landsat satellite imagery.
+
+---
+
+# What this analysis measures — and what it does not
+
+::: {.callout-important}
+## LST is not air temperature — please read this carefully
+
+The analysis in this report is based on **Land Surface Temperature (LST)**: the
+radiometric skin temperature of surfaces as seen from space by the Landsat
+satellite's thermal infrared sensor. LST measures how hot the ground surface is
+— the asphalt of a parking lot, a rooftop, a field of grass.
+
+**LST is not the same as the air temperature you feel when you walk outside.**
+Over dark impervious surfaces in summer, LST can be 20–40°C higher than
+near-surface air temperature. The difference depends on the surface material,
+wind speed, humidity, and time of day [@voogt2003].
+
+When we report that a neighbourhood has an LST anomaly of +4°C relative to
+surrounding rural areas, this does **not** mean that residents experience air
+temperatures 4°C warmer. Empirical research suggests that a **2°C LST anomaly
+corresponds roughly to ~1°C in near-surface air temperature** (T~air~) anomaly,
+though this ratio is highly variable [@voogt2003; @imhoff2010].
+
+Why do we use LST then? Because it is:
+
+- **Spatially consistent**: derived from the same sensor across the whole city
+  in a single overpass
+- **Freely available** at 30 m resolution globally via Landsat
+- **Scientifically established** as a robust proxy for SUHII in hundreds of
+  peer-reviewed studies [@peng2012; @zhou2014]
+- **Useful for comparison**: even if absolute values differ from T~air~, LST
+  anomalies reliably identify the *relative* hot and cool spots
+
+Think of this analysis as a **thermal fingerprint** of the city: it tells you
+*where* the surface is hottest relative to the surrounding countryside, and by
+how much. It is a starting point for deeper analysis and targeted intervention,
+not a direct measure of outdoor thermal comfort.
+
+:::
+
+**When was the image acquired?**
+Landsat's overpass time is approximately **10:00 local time** (descending node).
+This is a morning measurement. The classical air-temperature UHI is typically
+strongest at night (2–4 hours after sunset) and weakest around midday [@oke1982].
+Surface UHI, by contrast, can be strongest in the early afternoon when solar
+loading is maximum. The morning overpass captures a transitional state — not the
+daily peak, but still informative for identifying persistently warm surfaces.
+
+---
+
+# Data and methodology
+
+## Satellite data
+
+Landsat Collection 2 Level 2 (C2L2) surface temperature products were downloaded
+from **Microsoft Planetary Computer** (free, anonymous access via the STAC API).
+C2L2 products have been atmospherically corrected and provide calibrated Land
+Surface Temperature values. The scale factor applied to convert Digital Numbers
+to Kelvin is: $LST [K] = DN \times 0.00341802 + 149.0$, then converted to
+Celsius: $LST [°C] = LST [K] - 273.15$ [@usgs_c2l2].
+
+Only **Tier 1** scenes (highest geometric and radiometric quality) were used.
+Scenes with more than `r params$max_cloud`% cloud cover were excluded.
+Individual scenes with more than 70% cloud/NA pixels over the study area were
+discarded. A seasonal mean was computed pixel-wise across all valid scenes.
+
+The **QA_PIXEL** band was used for per-pixel cloud masking:
+
+- Landsat 8/9: valid pixel = QA_PIXEL == 21824 (clear land, no cloud,
+  no cloud shadow, no snow)
+- Landsat 5/7: valid pixel = QA_PIXEL == 5440
+
+For Landsat 7 scenes acquired after May 2003 (scan-line corrector failure),
+an 11×11 focal mean filter was applied to fill the characteristic data gaps
+before mosaicking.
+
+**`r stats$n_landsat_scenes`** valid scenes were used in this analysis
+(season: `r params$start_date` → `r params$end_date`).
+
+## Reference areas
+
+The **urban area** was defined from OpenStreetMap features: artificial land use
+(commercial, residential, industrial, etc.), amenity, tourism, leisure
+(recreational), aeroway, and highway polygon features.
+
+The **rural reference area** was defined from natural vegetation (OSM `natural`
+tag: grassland, forest, wood, scrub, etc.), agricultural land use (farmland,
+meadow, orchard, etc.), and urban green spaces (parks, gardens, nature
+reserves). A 100 m buffer around the urban mask was excluded from the rural
+reference to avoid edge contamination.
+
+The **Surface UHI Intensity (SUHII)** is computed as:
+$$\text{SUHII}(x,y) = \text{LST}(x,y) - \bar{\text{LST}}_\text{rural}$$
+
+where $\bar{\text{LST}}_\text{rural}$ is the spatial mean of LST over all rural
+reference pixels within the same elevation band. This definition follows
+@peng2012 and @imhoff2010.
+
+## Elevation stratification
+
+To isolate the thermal signature of urbanisation from orographic temperature
+gradients (temperature decreases ~6.5°C per 1000 m of altitude), the study
+area was divided into **`r params$altitude_band_height` m elevation bands**.
+The SUHII was computed independently within each band and the results were
+merged into a seamless mosaic. This approach is particularly important for
+cities on hills or with significant topographic relief.
+
+Source: SRTM Global 1 arc-second DEM (~30 m), downloaded via the OpenTopography
+API [@farr2007].
+
+## Koppen-Geiger climate classification
+
+The seasonal analysis window was derived from the **Koppen-Geiger climate
+classification** of the study area (class: **`r params$koppen_class`**). This
+ensures that the "warm season" corresponds to the climatically meaningful hot
+period for the specific city, rather than using fixed calendar months that may
+not be appropriate across different climate zones [@kottek2006].
+
+---
+
+# Results
+
+## Seasonal mean Land Surface Temperature
+
+```{r map-lst, fig.cap="Seasonal mean LST (°C). Warmer colours indicate higher surface temperatures."}
+lst_wgs  <- to_wgs84(lst_mean)
+lst_vals <- terra::values(lst_wgs, na.rm = TRUE)
+
+pal_lst <- colorNumeric(
+  palette = "Spectral",
+  domain  = quantile(lst_vals, c(0.02, 0.98), na.rm = TRUE),
+  reverse = TRUE,
+  na.color = "transparent"
+)
+
+leaflet(options = leafletOptions(minZoom = 8)) |>
+  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+  addRasterImage(lst_wgs, colors = pal_lst, opacity = 0.80,
+                 group = "Mean LST") |>
+  addLegend("bottomright", pal = pal_lst,
+            values = lst_vals,
+            title  = "Mean LST (°C)",
+            labFormat = labelFormat(suffix = "°C", digits = 1)) |>
+  addLayersControl(
+    baseGroups   = c("Light", "Satellite"),
+    overlayGroups = "Mean LST",
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+::: {.callout-note collapse="true"}
+## How to read this map
+The colours show the **average daytime surface temperature** (approximately
+10:00 local time) across all cloud-free Landsat scenes during the
+`r params$season` season of `r params$year`. Red and orange areas are the
+hottest surfaces — typically dense urban cores, industrial zones, and large
+parking areas. Blue and green areas are cooler — parks, water bodies, and
+agricultural land on the urban fringe.
+:::
+
+```{r lst-stats}
+data.frame(
+  Statistic = c(
+    "Mean LST — urban area",
+    "Mean LST — rural reference",
+    "Max LST — urban area",
+    "Difference (urban − rural)"
+  ),
+  Value = c(
+    paste0(fmt1(stats$lst_mean_urban_C), " °C"),
+    paste0(fmt1(stats$lst_mean_rural_C), " °C"),
+    paste0(fmt1(stats$lst_max_urban_C),  " °C"),
+    paste0(fmt1(stats$lst_mean_urban_C - stats$lst_mean_rural_C), " °C ▲")
+  )
+) |>
+  kable(caption = "LST summary statistics",
+        col.names = c("Statistic", "Value"),
+        align = c("l","r")) |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+```
+
+## Thermal anomaly and SUHII classification
+
+The map below shows the **LST anomaly**: the deviation of each pixel's surface
+temperature from the mean of the rural reference areas, within the same
+elevation band. Positive values indicate surfaces warmer than the rural
+surroundings; negative values indicate cooler surfaces (urban cool islands,
+typically parks or water bodies).
+
+```{r map-classified, fig.cap="Surface Urban Heat Island Intensity classified into 6 levels (LST anomaly relative to rural reference)."}
+cls_wgs <- to_wgs84(classified)
+
+pal_cls <- colorFactor(
+  palette = CLASS_COLOURS,
+  domain  = 1:6,
+  na.color = "transparent"
+)
+
+leaflet(options = leafletOptions(minZoom = 8)) |>
+  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+  addRasterImage(cls_wgs, colors = pal_cls, opacity = 0.80,
+                 group = "SUHII classes") |>
+  addLegend("bottomright",
+            colors = CLASS_COLOURS,
+            labels = c(
+              "Cool island (< 0°C)",
+              "Neutral (0–1°C)",
+              "Weak (1–2.5°C)",
+              "Moderate (2.5–4.5°C)",
+              "Strong (4.5–6.5°C)",
+              "Extreme (> 6.5°C)"
+            ),
+            title  = "LST anomaly class",
+            opacity = 0.9) |>
+  addLayersControl(
+    baseGroups   = c("Light", "Satellite"),
+    overlayGroups = "SUHII classes",
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+::: {.callout-important}
+## What the classes mean
+
+The six classes are based on the **LST anomaly** (surface temperature
+difference between the urban pixel and the rural reference, in °C). These are
+**surface temperature differences**, not air temperature differences.
+Thresholds follow @stewart2012 and @chen2022 and are expressed as:
+
+| Class | LST anomaly | Interpretation |
+|:------|:-----------:|:---------------|
+| Cool island | < 0°C | Surface cooler than rural (parks, water) |
+| Neutral | 0–1°C | No significant surface heat island |
+| Weak | 1–2.5°C | Detectable surface heat island |
+| Moderate | 2.5–4.5°C | Significant surface heat island |
+| Strong | 4.5–6.5°C | Intense surface heat island |
+| Extreme | > 6.5°C | Extreme hotspot; potential health risk zone |
+
+The global average daytime SUHII across 419 major cities is **1.5 ± 1.2°C**
+[@peng2012]. Values above 2.5°C indicate an above-average urban heat effect
+for this city relative to its rural surroundings.
+
+**Reminder**: to estimate the *air temperature* anomaly a resident might
+perceive, divide the LST anomaly by approximately 2 [@voogt2003]. A "Strong"
+class (4.5–6.5°C LST) corresponds roughly to 2–3°C warmer air temperatures
+— which is significant for health, especially during heatwaves.
+:::
+
+```{r bar-classes, fig.cap="Percentage of urban area in each SUHII class."}
+class_df <- data.frame(
+  class = factor(CLASS_LABELS, levels = rev(CLASS_LABELS)),
+  pct   = c(
+    stats$pct_urban_cool_island,
+    stats$pct_urban_neutral,
+    stats$pct_urban_weak,
+    stats$pct_urban_moderate,
+    stats$pct_urban_strong,
+    stats$pct_urban_extreme
+  ),
+  colour = CLASS_COLOURS
+)
+
+ggplot(class_df, aes(x = class, y = pct, fill = class)) +
+  geom_col(width = 0.65, show.legend = FALSE) +
+  geom_text(aes(label = paste0(round(pct, 1), "%")),
+            hjust = -0.1, size = 3.5, colour = "grey30") +
+  scale_fill_manual(values = setNames(rev(CLASS_COLOURS), rev(CLASS_LABELS))) +
+  scale_y_continuous(
+    limits = c(0, max(class_df$pct, na.rm = TRUE) * 1.2),
+    labels = function(x) paste0(x, "%")
+  ) +
+  coord_flip() +
+  labs(
+    x = NULL, y = "% of urban area",
+    title = "Distribution of SUHII classes across urban area",
+    caption = paste0(
+      "LST anomaly classes (surface temperature difference vs rural reference).\n",
+      "Source: Landsat C2L2, ", params$start_date, " – ", params$end_date
+    )
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    plot.caption        = element_text(size = 9, colour = "grey50")
+  )
+```
+
+## SUHII index map
+
+The SUHII index is a **normalised version** of the LST anomaly, rescaled from
+0 (coolest point in the study area) to 1 (hottest point). It is useful for
+identifying spatial patterns and hotspots at a glance, without reference to
+absolute temperature values.
+
+$$\text{SUHII index} = \frac{\text{LST} - \text{LST}_{min}}{\text{LST}_{max} - \text{LST}_{min}}$$
+
+```{r map-suhi, fig.cap="SUHII normalised index (0 = coolest, 1 = hottest). Useful for identifying spatial hotspots."}
+suhi_wgs  <- to_wgs84(suhi)
+suhi_vals <- terra::values(suhi_wgs, na.rm = TRUE)
+
+pal_suhi <- colorNumeric(
+  palette  = "Spectral",
+  domain   = c(0, 1),
+  reverse  = TRUE,
+  na.color = "transparent"
+)
+
+leaflet(options = leafletOptions(minZoom = 8)) |>
+  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+  addRasterImage(suhi_wgs, colors = pal_suhi, opacity = 0.80,
+                 group = "SUHII index") |>
+  addLegend("bottomright", pal = pal_suhi,
+            values = c(0, 1),
+            title  = "SUHII index",
+            labFormat = labelFormat(digits = 1)) |>
+  addLayersControl(
+    baseGroups    = c("Light", "Satellite"),
+    overlayGroups = "SUHII index",
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+## Distance from green areas — the 3-30-300 rule
+
+The **3-30-300 rule** was introduced by urban forester Cecil Konijnendijk
+[-@konijnendijk2022] as an evidence-based guideline for equitable urban greening:
+
+> - **3 trees** visible from every home, school, or workplace
+> - **30%** tree canopy cover in every neighbourhood
+> - **300 m** maximum distance to the nearest park or quality green space
+
+This analysis addresses the **300 m component**: areas shown on the map are
+those where the nearest green space is more than 300 m away, indicating a
+**green access deficit**. Research consistently links poor access to green
+spaces with worse mental health outcomes, higher heat stress, and greater
+vulnerability during heatwaves [@konijnendijk2022; @gascon2015].
+
+```{r map-green, eval=has_dist, fig.cap="Areas beyond 300 m from any green space (3-30-300 rule). Grey = within 300 m (compliant). Coloured = green access deficit."}
+dist_wgs  <- to_wgs84(green_dist)
+dist_vals <- terra::values(dist_wgs, na.rm = TRUE)
+dist_max  <- max(dist_vals, na.rm = TRUE)
+
+pal_dist <- colorNumeric(
+  palette  = "YlOrRd",
+  domain   = c(300, dist_max),
+  na.color = "transparent"
+)
+
+leaflet(options = leafletOptions(minZoom = 8)) |>
+  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+  addRasterImage(dist_wgs, colors = pal_dist, opacity = 0.80,
+                 group = "Green deficit") |>
+  addLegend("bottomright", pal = pal_dist,
+            values   = c(300, dist_max),
+            title    = "Distance to green (m)",
+            labFormat = labelFormat(suffix = " m", digits = 0)) |>
+  addLayersControl(
+    baseGroups    = c("Light", "Satellite"),
+    overlayGroups = "Green deficit",
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+```{r green-stat, eval=has_dist}
+if (!is.na(stats$pct_urban_beyond_300m_green)) {
+  cat(sprintf(
+    "\n**%s%%** of the urban area is more than 300 m from the nearest green or\n",
+    stats$pct_urban_beyond_300m_green
+  ))
+  cat("rural reference area — these residents have a green access deficit\n")
+  cat("according to the 3-30-300 rule [@konijnendijk2022].\n")
+}
+```
+
+## Where to act — Intervention priority map
+
+The map below identifies **where green infrastructure investment would most
+reduce heat exposure**. The priority index combines three factors:
+
+| Component | Weight | Rationale |
+|:----------|:------:|:----------|
+| LST anomaly (normalised) | **50%** | Primary driver of heat stress |
+| Green access deficit (normalised) | **30%** | Main lever for UHI mitigation |
+| Urban land cover | **20%** | Restricts priority to actionable areas |
+
+High-priority areas (red) are **hot, poorly served by green infrastructure, and
+urban** — exactly where planting trees, creating parks, or installing green
+roofs would have the greatest combined benefit for cooling and accessibility.
+
+The weights are informed by @maragkogiannis2024 and @morabito2015, who found
+that thermal exposure and green deficit are the dominant drivers of heat
+vulnerability in urban areas. **The weights are explicit and can be adjusted
+by the user in module 08 (`W_THERMAL`, `W_GREEN`, `W_URBAN`)** to reflect
+local priorities.
+
+```{r map-priority, fig.cap="Intervention priority index (0 = low priority, 1 = highest priority). Only urban pixels are shown."}
+prio_wgs <- to_wgs84(priority)
+
+pal_prio <- colorNumeric(
+  palette  = c("#ffffcc","#feb24c","#f03b20","#bd0026"),
+  domain   = c(0, 1),
+  na.color = "transparent"
+)
+
+leaflet(options = leafletOptions(minZoom = 8)) |>
+  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+  addRasterImage(prio_wgs, colors = pal_prio, opacity = 0.85,
+                 group = "Priority") |>
+  addLegend("bottomright", pal = pal_prio,
+            values  = c(0, 1),
+            title   = "Priority index",
+            labFormat = labelFormat(digits = 2)) |>
+  addLayersControl(
+    baseGroups    = c("Light", "Satellite"),
+    overlayGroups = "Priority",
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+---
+
+# What can be done?
+
+The science of UHI mitigation is well-established. The most effective and
+co-beneficial strategies are:
+
+**Green infrastructure** — Trees are the single most effective urban cooling
+intervention. Street trees reduce surrounding air temperatures by 2–8°C through
+shading and evapotranspiration [@bowler2010]. Expanding parks, green roofs,
+and green corridors in high-priority areas addresses both the heat island and
+the green deficit identified by the 3-30-300 rule.
+
+**Cool/reflective surfaces** — High-albedo road and roof surfaces reduce solar
+absorption. Combined with green roofs, hybrid interventions can reduce LST by
+2–3°C in tropical and Mediterranean cities [@santamouris2014].
+
+**Permeable pavements** — Reduce surface temperatures by enabling evaporation
+and improving urban water management.
+
+**Urban planning** — Street orientation and canyon geometry influence shadow
+patterns and wind flow. Compact high-rise areas can trap heat between buildings,
+while well-designed open spaces create cooling corridors.
+
+**Who should act?**
+
+- **City administrations**: prioritise the high-priority areas identified above
+  for tree-planting programmes, park creation, and building regulations
+  requiring green roofs.
+- **Neighbourhood associations**: advocate for street trees and small pocket
+  parks in heat-exposed areas.
+- **Developers**: incorporate green infrastructure from the design stage.
+- **Citizens**: plant trees in private gardens and courtyards; advocate for
+  shaded public spaces.
+
+---
+
+# Limitations and caveats
+
+- **LST ≠ T~air~**: as explained at the top of this report, this analysis measures
+  surface temperature, not the air temperature experienced by people. For
+  health risk assessment, additional data (population density, building
+  typology, social vulnerability) should be integrated.
+
+- **Single season**: one season's data captures the thermal pattern for that
+  specific year. Anomalously hot or cool years may affect results. Multi-year
+  averages are more robust.
+
+- **30 m resolution**: Landsat's pixel size is 30 m × 30 m. Features smaller
+  than this (a single tree, a small courtyard) are not resolved.
+
+- **Morning overpass**: the ~10:00 acquisition time does not capture the
+  nocturnal peak of the air-temperature UHI, which typically occurs 2–4 hours
+  after sunset.
+
+- **OSM data completeness**: the urban and rural masks depend on OpenStreetMap
+  data quality, which varies between cities and regions. Unmapped areas may
+  be misclassified.
+
+- **No population data**: the priority map does not include population density.
+  High-priority areas with high population density should be considered most
+  urgent for intervention. Integrating census data is a recommended next step.
+
+---
+
+# References {.unnumbered}
+
+::: {#refs}
+:::
+
+```{r refs-inline, include=FALSE}
+# References are declared here for inline citation.
+# Full bibliography is rendered above by Quarto/Pandoc.
+# The bibliography file (references.bib) is generated by 09_report.R.
+```
+
+---
+
+# Technical appendix {.unnumbered}
+
+```{r stats-table}
+t(stats) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("Parameter") |>
+  setNames(c("Parameter", "Value")) |>
+  kable(caption = "Full summary statistics table",
+        align = c("l","l")) |>
+  kable_styling(bootstrap_options = c("striped","condensed"),
+                font_size = 12, full_width = FALSE)
+```
+
+**Software and data sources:**
+
+- R `r R.version$major`.`r R.version$minor` [@rcoreteam]
+- terra `r packageVersion("terra")` [@hijmans2022]
+- rstac `r packageVersion("rstac")` — STAC API client
+- osmdata `r packageVersion("osmdata")` — OSM data
+- Landsat Collection 2 Level 2, USGS / Microsoft Planetary Computer [@usgs_c2l2]
+- SRTM GL1 DEM, OpenTopography [@farr2007]
+- OpenStreetMap contributors, ODbL licence
+
+**Citation for this analysis:**
+
+Richiardi, C., Caroscio, L., Crescini, E., De Marchi, M., De Pieri, G. M.,
+Ceresi, C., Baldo, F., Francobaldi, M., & Pappalardo, S. E. (2025). A global
+downstream approach to mapping surface urban heat islands using open data and
+collaborative technology. *Sustainable Geosciences: People, Planet and
+Prosperity*, 100006. <https://doi.org/10.1016/j.susgeo.2025.100006>
