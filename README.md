@@ -5,7 +5,7 @@
 `🇮🇹 Versione italiana più sotto — Italian version below`
 
 <p align="center">
-  <img src="shiny/www/scift.jpg" height="200" alt="Officina SCIFT logo"/>
+  <img src="shiny/www/scift.jpg" height="180" alt="Officina SCIFT logo"/>
 </p>
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -63,12 +63,25 @@ For each city, the tool saves these files to `data/<city>/Output/`:
 
 ### Step 1 — Download the project
 
+**Option A — Download ZIP (easiest, no Git needed)**
+
+1. Go to [github.com/Officina-SCIFT/SUHII_mapping](https://github.com/Officina-SCIFT/SUHII_mapping)
+2. Click the green **Code** button → **Download ZIP**
+3. Extract the ZIP somewhere easy to find (e.g. your Desktop or Documents)
+
+**Option B — Git clone (if you have Git installed)**
+
+Open a terminal and run:
+
 ```bash
 git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
-cd SUHII_mapping_tool
 ```
 
-Or download the ZIP from GitHub and extract it.
+> 💡 **How to open a terminal on your system:**
+>
+> - **Windows** → press `Win + R`, type `powershell`, press Enter
+> - **Mac** → press `Cmd + Space`, type `Terminal`, press Enter
+> - **Linux** → press `Ctrl + Alt + T`
 
 ---
 
@@ -82,11 +95,25 @@ Or download the ZIP from GitHub and extract it.
 
 ### Step 3 — Add the key to the project
 
+Navigate to the project folder and duplicate the example credentials file:
+
+**Windows (PowerShell)**
+```powershell
+cd C:\Users\YourName\Desktop\SUHII_mapping
+copy config\credentials.yml.example config\credentials.yml
+```
+
+**Mac / Linux (Terminal)**
 ```bash
+cd ~/Desktop/SUHII_mapping
 cp config/credentials.yml.example config/credentials.yml
 ```
 
-Or open `config/credentials.yml` with a text editor (e.g. Notepad++) and replace the placeholder:
+> 💡 Replace `C:\Users\YourName\Desktop\SUHII_mapping` (Windows) or `~/Desktop/SUHII_mapping` (Mac/Linux)
+> with the actual path where you extracted or cloned the project.
+
+Now open `config/credentials.yml` with any text editor (Notepad, TextEdit, VS Code…)
+and replace the placeholder with your key:
 
 ```yaml
 opentopography:
@@ -99,9 +126,25 @@ opentopography:
 
 ### Step 4 — Build and launch
 
-```bash
+Open a terminal **inside the project folder** and run:
+
+**Windows (PowerShell)**
+```powershell
+cd C:\Users\YourName\Desktop\SUHII_mapping
 docker-compose up --build
 ```
+
+**Mac / Linux (Terminal)**
+```bash
+cd ~/Desktop/SUHII_mapping
+docker-compose up --build
+```
+
+> 💡 **Tip — navigate to the folder faster:**
+> In Windows Explorer or Mac Finder, open the project folder,
+> then right-click on an empty area and choose:
+> - **Windows** → *Open in Terminal* (or *Open PowerShell window here*)
+> - **Mac** → *New Terminal at Folder* (enable it in System Settings → Keyboard → Shortcuts → Services)
 
 > ⏳ **The first build takes 10–15 minutes** — this happens only once.
 > Docker is downloading R, Quarto, and all required packages (~1 GB).
@@ -156,6 +199,15 @@ All files are also saved locally in the `data/` folder.
 
 ### Step 8 — Stop the app
 
+Go back to the terminal where the app is running and press `Ctrl + C` to stop it.
+Then run:
+
+**Windows (PowerShell)**
+```powershell
+docker-compose down
+```
+
+**Mac / Linux (Terminal)**
 ```bash
 docker-compose down
 ```
@@ -263,12 +315,12 @@ Tested on Windows 11 Pro — 32 GB RAM, AMD Ryzen 7 2700X 3.70 GHz — across 40
 Most of the time is spent on downloads, not computation:
 
 ```
-OSM download      ████████████████░░░░  ~4.6 min
-Landsat download  ████████████████░░░░  ~4.6 min
-DEM download      █░░░░░░░░░░░░░░░░░░░  ~0.3 min
-LST processing    ██░░░░░░░░░░░░░░░░░░  ~0.5 min
-SUHII calculation ████░░░░░░░░░░░░░░░░  ~1.3 min
-Other             ░░░░░░░░░░░░░░░░░░░░  < 0.1 min
+OSM download      [================    ]  ~4.6 min
+Landsat download  [================    ]  ~4.6 min
+DEM download      [=                   ]  ~0.3 min
+LST processing    [==                  ]  ~0.5 min
+SUHII calculation [====                ]  ~1.3 min
+Other             [                    ]  < 0.1 min
 ```
 
 Large cities with extensive OSM data (e.g. Moscow) can reach ~120 min.
@@ -294,6 +346,18 @@ projects — must cite the original paper:
 
 ## Project
 
+This tool was born within **[SCIFT](https://municipiozero.it/scift/)** — **Laboratory of Science, Climactivism, Imagination, Fostering Knowledge and Technology** — a collaborative space between academic research and social and territorial activism, based in Bologna (Vicolo Bolognetti 2) with a global vocation.
+
+SCIFT was founded in 2024, emerging from the meeting of a group of PhD students and citizens at the **Reclaim The Tech festival** in Bologna — a festival dedicated to the conscious reappropriation of technology. From that encounter came the idea of a participatory initiative to tackle the growing problem of Urban Heat Islands through a digital platform based on open data, enabling citizens, researchers, planners, and administrators to work together to monitor and respond to UHI effects.
+
+The name is not just an acronym — it reflects a precise vision:
+
+- **S**cience — open, democratic, and accessible, oriented toward social and climate justice
+- **C**limactivism — collective political action that goes beyond the narrative of the climate crisis
+- **I**magination — a central political practice for building alternative futures
+- **F**ostering Knowledge — horizontal, situated education as a common good
+- **T**echnology — critically reappropriated, not delegated blindly to "technological progress"
+
 Released under **GNU General Public License v3.0 (GPL 3.0)**.
 Aligns with **SDG 11** (Sustainable Cities) and **SDG 17** (Partnerships for the Goals).
 
@@ -315,8 +379,8 @@ Want to contribute with code, ideas, or data? Open an issue or submit a pull req
 
 ## Acknowledgements
 
-Developed by **[Officina SCIFT](https://municipiozero.it/scift/)** —
-Science, Craft, Innovation, Future, Technology.
+Developed by **[SCIFT](https://municipiozero.it/scift/)** —
+Laboratory of Science, Climactivism, Imagination, Fostering Knowledge and Technology.
 
 🌐 [municipiozero.it/scift](https://municipiozero.it/scift/) · 
 📷 [@scift_officina](https://www.instagram.com/scift_officina/) · 
@@ -388,12 +452,25 @@ Per ogni città, i file vengono salvati in `data/<città>/Output/`:
 
 ### Passo 1 — Scarica il progetto
 
+**Opzione A — Scarica lo ZIP (più semplice, non serve Git)**
+
+1. Vai su [github.com/Officina-SCIFT/SUHII_mapping](https://github.com/Officina-SCIFT/SUHII_mapping)
+2. Clicca il pulsante verde **Code** → **Download ZIP**
+3. Estrai lo ZIP in una posizione facile da trovare (es. Desktop o Documenti)
+
+**Opzione B — Git clone (se hai Git installato)**
+
+Apri un terminale e lancia:
+
 ```bash
 git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
-cd SUHII_mapping_tool
 ```
 
-Oppure scarica lo ZIP da GitHub ed estrailo.
+> 💡 **Come aprire un terminale sul tuo sistema:**
+>
+> - **Windows** → premi `Win + R`, scrivi `powershell`, premi Invio
+> - **Mac** → premi `Cmd + Spazio`, scrivi `Terminale`, premi Invio
+> - **Linux** → premi `Ctrl + Alt + T`
 
 ---
 
@@ -407,11 +484,25 @@ Oppure scarica lo ZIP da GitHub ed estrailo.
 
 ### Passo 3 — Inserisci la chiave nel progetto
 
+Apri un terminale, spostati nella cartella del progetto e duplica il file di esempio:
+
+**Windows (PowerShell)**
+```powershell
+cd C:\Users\TuoNome\Desktop\SUHII_mapping
+copy config\credentials.yml.example config\credentials.yml
+```
+
+**Mac / Linux (Terminale)**
 ```bash
+cd ~/Desktop/SUHII_mapping
 cp config/credentials.yml.example config/credentials.yml
 ```
 
-Oppure apri `config/credentials.yml` con un editor di testo (es. Notepad++) e sostituisci il placeholder:
+> 💡 Sostituisci `C:\Users\TuoNome\Desktop\SUHII_mapping` (Windows) o `~/Desktop/SUHII_mapping` (Mac/Linux)
+> con il percorso reale dove hai estratto o clonato il progetto.
+
+Apri `config/credentials.yml` con un qualsiasi editor di testo (Blocco Note, TextEdit, VS Code…)
+e sostituisci il placeholder con la tua chiave:
 
 ```yaml
 opentopography:
@@ -424,9 +515,25 @@ opentopography:
 
 ### Passo 4 — Avvia il container
 
-```bash
+Apri un terminale **dentro la cartella del progetto** e lancia:
+
+**Windows (PowerShell)**
+```powershell
+cd C:\Users\TuoNome\Desktop\SUHII_mapping
 docker-compose up --build
 ```
+
+**Mac / Linux (Terminale)**
+```bash
+cd ~/Desktop/SUHII_mapping
+docker-compose up --build
+```
+
+> 💡 **Trucco — apri il terminale direttamente nella cartella:**
+> In Esplora File (Windows) o Finder (Mac), apri la cartella del progetto,
+> poi fai clic destro su uno spazio vuoto e scegli:
+> - **Windows** → *Apri in Terminale* (o *Apri finestra PowerShell qui*)
+> - **Mac** → *Nuovo Terminale nella Cartella* (abilitalo in Impostazioni di Sistema → Tastiera → Abbreviazioni → Servizi)
 
 > ⏳ **Il primo avvio richiede 10–15 minuti** — succede solo la prima volta.
 > Docker sta scaricando R, Quarto e tutti i pacchetti necessari (~1 GB).
@@ -481,6 +588,15 @@ Tutti i file sono salvati anche nella cartella `data/` sul tuo computer.
 
 ### Passo 8 — Ferma l'app
 
+Torna al terminale dove l'app è in esecuzione e premi `Ctrl + C` per interromperla.
+Poi esegui:
+
+**Windows (PowerShell)**
+```powershell
+docker-compose down
+```
+
+**Mac / Linux (Terminale)**
 ```bash
 docker-compose down
 ```
@@ -588,12 +704,12 @@ Testato su Windows 11 Pro — 32 GB RAM, AMD Ryzen 7 2700X 3,70 GHz — su 40 ci
 La maggior parte del tempo è impiegata nei download, non nel calcolo:
 
 ```
-Download OSM      ████████████████░░░░  ~4,6 min
-Download Landsat  ████████████████░░░░  ~4,6 min
-Download DEM      █░░░░░░░░░░░░░░░░░░░  ~0,3 min
-Elaborazione LST  ██░░░░░░░░░░░░░░░░░░  ~0,5 min
-Calcolo SUHII     ████░░░░░░░░░░░░░░░░  ~1,3 min
-Altro             ░░░░░░░░░░░░░░░░░░░░  < 0,1 min
+Download OSM      [================    ]  ~4,6 min
+Download Landsat  [================    ]  ~4,6 min
+Download DEM      [=                   ]  ~0,3 min
+Elaborazione LST  [==                  ]  ~0,5 min
+Calcolo SUHII     [====                ]  ~1,3 min
+Altro             [                    ]  < 0,1 min
 ```
 
 Le città più grandi con molti dati OSM (es. Mosca) possono raggiungere ~120 min.
@@ -619,6 +735,18 @@ in altri progetti — deve includere la citazione del lavoro originale:
 
 ## Progetto
 
+Questo strumento è nato all'interno di **[SCIFT](https://municipiozero.it/scift/)** — **Officina di Scienza, Climattivismo, Immaginazione, Formazione e Tecnologia** — uno spazio collaborativo tra ricerca accademica e attivismo sociale e territoriale, con sede a Bologna (Vicolo Bolognetti 2) e vocazione globale.
+
+SCIFT è nata nel 2024, dall'incontro di un gruppo di dottorande e dottorandi e cittadine e cittadini al festival **Reclaim The Tech** di Bologna — un festival dedicato alla riappropriazione consapevole della tecnologia. Da quell'incontro è emersa l'idea di un'iniziativa partecipativa per affrontare il crescente problema delle isole di calore urbane attraverso una piattaforma digitale basata su dati aperti, che permette a cittadine/i, ricercatrici/ori, pianificatrici/ori e amministratrici/ori di collaborare per monitorare e rispondere agli effetti delle UHI.
+
+Il nome non è solo un acronimo — riflette una visione precisa:
+
+- **S**cienza — aperta, democratica e accessibile, orientata alla giustizia sociale e climatica
+- **C**limattivismo — azione politica collettiva che va oltre la narrazione della crisi climatica
+- **I**mmaginazione — pratica politica centrale per costruire futuri alternativi
+- **F**ormazione — educazione orizzontale e situata come bene comune
+- **T**ecnologia — riappropriata criticamente, non delegata ciecamente al "progresso tecnologico"
+
 Rilasciato sotto licenza **GNU General Public License v3.0 (GPL 3.0)**.
 Si allinea con **SDG 11** (Città sostenibili) e **SDG 17** (Partnership per gli obiettivi).
 
@@ -640,9 +768,9 @@ Vuoi contribuire con codice, idee o dati? Apri una issue o invia una pull reques
 
 ## Ringraziamenti
 
-Sviluppato da **[Officina SCIFT](https://municipiozero.it/scift/)** —
-Science, Craft, Innovation, Future, Technology.
+Sviluppato da **[SCIFT](https://municipiozero.it/scift/)** —
+Officina di Scienza, Climattivismo, Immaginazione, Formazione e Tecnologia.
 
 🌐 [municipiozero.it/scift](https://municipiozero.it/scift/) · 
 📷 [@scift_officina](https://www.instagram.com/scift_officina/) · 
-✉️ sciftofficina@protonmail.com
+✉️ scift@gmail.com
