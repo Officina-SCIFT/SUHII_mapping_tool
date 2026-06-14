@@ -384,7 +384,7 @@ Laboratory of Science, Climactivism, Imagination, Fostering Knowledge and Techno
 
 🌐 [municipiozero.it/scift](https://municipiozero.it/scift/) · 
 📷 [@scift_officina](https://www.instagram.com/scift_officina/) · 
-✉️ sciftofficina@protonmail.com
+✉️ scift@gmail.com
 
 ---
 ---
