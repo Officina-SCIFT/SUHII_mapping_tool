@@ -246,7 +246,7 @@ Try `docker-compose down`, then `docker-compose up --build`.
 │  1) Preliminary    →  load libraries, set bounding box,         │
 │     operations        detect warm season via Köppen-Geiger      │
 ├─────────────────────────────────────────────────────────────────┤
-│  2) Data download  →  Landsat 8-9 (ST + QA bands)              │
+│  2) Data download  →  Landsat 8-9 (ST + QA bands)               │
 │                       Digital Elevation Model (SRTM)            │
 │                       Urban & rural areas (OpenStreetMap)       │
 ├─────────────────────────────────────────────────────────────────┤
@@ -635,7 +635,7 @@ Prova `docker-compose down` e poi `docker-compose up --build`.
 │  1) Operazioni     →  carica librerie, bounding box,            │
 │     preliminari       rileva stagione calda via Köppen-Geiger   │
 ├─────────────────────────────────────────────────────────────────┤
-│  2) Download dati  →  Landsat 8-9 (bande ST + QA)              │
+│  2) Download dati  →  Landsat 8-9 (bande ST + QA)               │
 │                       Modello digitale del terreno (SRTM)       │
 │                       Aree urbane e rurali (OpenStreetMap)      │
 ├─────────────────────────────────────────────────────────────────┤
