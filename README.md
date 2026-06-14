@@ -338,7 +338,7 @@ Per ogni città il workflow salva i seguenti file in `/data/<città>/Output/`:
 
 ## Guida rapida — Docker (consigliato, nessuna installazione necessaria)
 
-**Serve solo [Docker Desktop](https://www.docker.com/products/docker-desktop/).**
+**Serve solo installare [Docker Desktop](https://www.docker.com/products/docker-desktop/).**
 Nessun R, nessun RStudio, nessun pacchetto da installare.
 
 ### Passo 1 — Scarica la repository
