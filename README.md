@@ -190,7 +190,7 @@ suhii_app | [INFO] Starting listener on 0.0.0.0:3838
 ### Step 6 — Run an analysis
 
 1. Type a **city name** (use the name as it appears in OpenStreetMap)
-   → For small towns, add the province: `Bologna, Emilia-Romagna`
+   → For small towns, add the province: `Bologna`
 2. Click **Run analysis**
 3. Watch the progress log on the left sidebar
 
@@ -590,7 +590,7 @@ suhii_app | [INFO] Starting listener on 0.0.0.0:3838
 ### Passo 6 — Esegui un'analisi
 
 1. Scrivi il **nome della città** (usa il nome come appare in OpenStreetMap)
-   → Per comuni piccoli aggiungi la provincia: `Bologna, Emilia-Romagna`
+   → Per comuni piccoli aggiungi la provincia: `Bologna`
 2. Clicca **Run analysis**
 3. Segui il log di avanzamento nella barra laterale sinistra
 
