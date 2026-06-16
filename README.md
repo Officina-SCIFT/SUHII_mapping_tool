@@ -52,6 +52,26 @@ For each city, the tool saves these files to `data/<city>/Output/`:
 
 ---
 
+## IMPORTANT: After using the tool, share your feedback and help us grow this project!    
+We would love to hear how you are using the workflow! Your contribution helps us improve the tools and enhance practical applications.  
+We are building SUHII_mapping as an open, useful tool that is truly rooted in the needs of the community.
+That is why we have created a short form: filling it out helps us improve the code, understand how it is used and, above all, give a voice to those who participate.  
+Our goal is to create grassroots practices, a bridge between science and citizenship, where researchers, professionals, students, administrators and curious minds can contribute together to the public good.
+At the same time, we are also developing a web platform to facilitate connections between users, offer more accessible tools and create a space for ongoing discussion.  
+  
+Filling out the form means:  
+🛠️ telling us what works and what we can improve  
+🌍 contributing to an open and participatory process of knowledge  
+💬 helping us shape the space for dialogue we are creating  
+
+If you want to contribute to the project — with code, ideas, feedback or collaborations — you are welcome!
+
+👉 Fill out the [feedback form](https://docs.google.com/forms/d/e/1FAIpQLScuYIyojP9iiTP3vjk2wFNVpeEuBwITrGmT-Cp-hU-JH-i7mw/viewform?usp=sf_link) to share your experience. Your ideas matter!  
+  
+If you wish, you can also tell us your user story and the impact of your results. Thank you for contributing.  
+
+---
+
 ## Getting started
 
 ### What you need
@@ -438,6 +458,17 @@ Per ogni città, i file vengono salvati in `data/<città>/Output/`:
 | `warm_<anno>_priority_map.geojson` | Export vettoriale GIS |
 | `warm_<anno>_city_stats.csv` | Statistiche di sintesi |
 | `<città>_warm_<anno>_report.html` | ✨ Report HTML interattivo completo |
+
+---
+Per domande o contributi, apri una issue, invia una pull request o contattaci via mail.  
+  
+# 💬 Non dimenticare di condividere il tuo feedback!  
+Ci piacerebbe sapere come utilizzi il flusso di lavoro. Il tuo contributo ci aiuta a migliorarlo e a metterne in evidenza le applicazioni nel mondo reale.  
+  
+👉 Dedica qualche minuto alla compilazione del nostro [modulo di feedback utente](https://docs.google.com/forms/d/e/1FAIpQLScPsFdDerNaYa_WPHlRN-0qV5SfJcZ4uILIQK0cef_2M6jNOg/viewform?usp=dialog).
+  
+Se lo desideri, puoi anche condividere la tua esperienza sull'utilizzo del flusso di lavoro e sull'impatto dei risultati ottenuti.  
+Grazie per il tuo contributo nel rendere questo progetto più aperto, utile e collaborativo! 🌍  
 
 ---
 
