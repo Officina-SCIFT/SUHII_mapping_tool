@@ -94,7 +94,7 @@ If you wish, you can also tell us your user story and the impact of your results
 Open a terminal and run:
 
 ```bash
-git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
+git clone https://github.com/Officina-SCIFT/SUHII_mapping_tool.git
 ```
 
 > 💡 **How to open a terminal on your system:**
@@ -119,17 +119,17 @@ Navigate to the project folder and duplicate the example credentials file:
 
 **Windows (PowerShell)**
 ```powershell
-cd C:\Users\YourName\Desktop\SUHII_mapping
+cd C:\Users\YourName\Desktop\SUHII_mapping_tool
 copy config\credentials.yml.example config\credentials.yml
 ```
 
 **Mac / Linux (Terminal)**
 ```bash
-cd ~/Desktop/SUHII_mapping
+cd ~/Desktop/SUHII_mapping_tool
 cp config/credentials.yml.example config/credentials.yml
 ```
 
-> 💡 Replace `C:\Users\YourName\Desktop\SUHII_mapping` (Windows) or `~/Desktop/SUHII_mapping` (Mac/Linux)
+> 💡 Replace `C:\Users\YourName\Desktop\SUHII_mapping_tool` (Windows) or `~/Desktop/SUHII_mapping_tool` (Mac/Linux)
 > with the actual path where you extracted or cloned the project.
 
 Now open `config/credentials.yml` with any text editor (Notepad, TextEdit, VS Code…)
@@ -150,13 +150,13 @@ Open a terminal **inside the project folder** and run:
 
 **Windows (PowerShell)**
 ```powershell
-cd C:\Users\YourName\Desktop\SUHII_mapping
+cd C:\Users\YourName\Desktop\SUHII_mapping_tool
 docker-compose up --build
 ```
 
 **Mac / Linux (Terminal)**
 ```bash
-cd ~/Desktop/SUHII_mapping
+cd ~/Desktop/SUHII_mapping_tool
 docker-compose up --build
 ```
 
@@ -240,7 +240,7 @@ Your data in `data/` is preserved.
 
 **"Cannot geocode city"**
 → The city name must match its OpenStreetMap entry exactly.
-Add the province for small towns: `Bologna, Emilia-Romagna`.
+Add the province for small towns: `Bologna`.
 Check at [nominatim.openstreetmap.org](https://nominatim.openstreetmap.org/).
 
 **"OpenTopography API key missing"**
@@ -494,7 +494,7 @@ Grazie per il tuo contributo nel rendere questo progetto più aperto, utile e co
 Apri un terminale e lancia:
 
 ```bash
-git clone https://github.com/Officina-SCIFT/SUHII_mapping.git
+git clone https://github.com/Officina-SCIFT/SUHII_mapping_tool.git
 ```
 
 > 💡 **Come aprire un terminale sul tuo sistema:**
@@ -519,17 +519,17 @@ Apri un terminale, spostati nella cartella del progetto e duplica il file di ese
 
 **Windows (PowerShell)**
 ```powershell
-cd C:\Users\TuoNome\Desktop\SUHII_mapping
+cd C:\Users\TuoNome\Desktop\SUHII_mapping_tool
 copy config\credentials.yml.example config\credentials.yml
 ```
 
 **Mac / Linux (Terminale)**
 ```bash
-cd ~/Desktop/SUHII_mapping
+cd ~/Desktop/SUHII_mapping_tool
 cp config/credentials.yml.example config/credentials.yml
 ```
 
-> 💡 Sostituisci `C:\Users\TuoNome\Desktop\SUHII_mapping` (Windows) o `~/Desktop/SUHII_mapping` (Mac/Linux)
+> 💡 Sostituisci `C:\Users\TuoNome\Desktop\SUHII_mapping_tool` (Windows) o `~/Desktop/SUHII_mapping_tool` (Mac/Linux)
 > con il percorso reale dove hai estratto o clonato il progetto.
 
 Apri `config/credentials.yml` con un qualsiasi editor di testo (Blocco Note, TextEdit, VS Code…)
@@ -550,13 +550,13 @@ Apri un terminale **dentro la cartella del progetto** e lancia:
 
 **Windows (PowerShell)**
 ```powershell
-cd C:\Users\TuoNome\Desktop\SUHII_mapping
+cd C:\Users\TuoNome\Desktop\SUHII_mapping_tool
 docker-compose up --build
 ```
 
 **Mac / Linux (Terminale)**
 ```bash
-cd ~/Desktop/SUHII_mapping
+cd ~/Desktop/SUHII_mapping_tool
 docker-compose up --build
 ```
 
@@ -640,7 +640,7 @@ I dati nella cartella `data/` vengono conservati.
 
 **"Cannot geocode city"**
 → Il nome della città deve corrispondere esattamente alla voce in OpenStreetMap.
-Per comuni piccoli aggiungi la provincia: `Bologna, Emilia-Romagna`.
+Per comuni piccoli aggiungi la provincia: `Bologna`.
 Verifica su [nominatim.openstreetmap.org](https://nominatim.openstreetmap.org/).
 
 **"OpenTopography API key missing"**
