@@ -76,7 +76,7 @@ If you wish, you can also tell us your user story and the impact of your results
 
 ### What you need
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — that's it. No R, no Python, no packages to install manually.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — that's it. No R, no Python, no packages to install manually. (After the installation, launch it!)
 - A free [OpenTopography API key](https://opentopography.org/developers) (takes 2 minutes to get).
 
 ---
@@ -476,7 +476,7 @@ Grazie per il tuo contributo nel rendere questo progetto più aperto, utile e co
 
 ### Cosa ti serve
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — tutto qui. Nessun R, nessun Python, nessun pacchetto da installare manualmente.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — tutto qui. Nessun R, nessun Python, nessun pacchetto da installare manualmente. (Dopo l'installazione, avvialo!).
 - Una [chiave API OpenTopography](https://opentopography.org/developers) gratuita (ci vogliono 2 minuti).
 
 ---
