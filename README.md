@@ -85,7 +85,7 @@ If you wish, you can also tell us your user story and the impact of your results
 
 **Option A — Download ZIP (easiest, no Git needed)**
 
-1. Go to [github.com/Officina-SCIFT/SUHII_mapping](https://github.com/Officina-SCIFT/SUHII_mapping)
+1. Go to [github.com/Officina-SCIFT/SUHII_mapping_tool](https://github.com/Officina-SCIFT/SUHII_mapping_tool)
 2. Click the green **Code** button → **Download ZIP**
 3. Extract the ZIP somewhere easy to find (e.g. your Desktop or Documents)
 
@@ -485,7 +485,7 @@ Grazie per il tuo contributo nel rendere questo progetto più aperto, utile e co
 
 **Opzione A — Scarica lo ZIP (più semplice, non serve Git)**
 
-1. Vai su [github.com/Officina-SCIFT/SUHII_mapping](https://github.com/Officina-SCIFT/SUHII_mapping)
+1. Vai su [github.com/Officina-SCIFT/SUHII_mapping_tool](https://github.com/Officina-SCIFT/SUHII_mapping_tool)
 2. Clicca il pulsante verde **Code** → **Download ZIP**
 3. Estrai lo ZIP in una posizione facile da trovare (es. Desktop o Documenti)
 
