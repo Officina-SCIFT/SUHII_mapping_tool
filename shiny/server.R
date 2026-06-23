@@ -91,6 +91,11 @@ CREDENTIALS <- if (file.exists("/srv/shiny-server/suhii/config/credentials.yml")
 
 server <- function(input, output, session) {
 
+  # Register the data folder so generated HTML reports can be served.
+  # Files in /data/<city>/Output/ become reachable at /suhii_data/<city>/Output/
+  data_root <- if (nzchar(Sys.getenv("SUHII_DATA_DIR"))) Sys.getenv("SUHII_DATA_DIR") else "/data"
+  try(shiny::addResourcePath("suhii_data", data_root), silent = TRUE)
+
   # ── Reactive values ─────────────────────────────────────────────────────────
   log_msgs  <- reactiveVal(character(0))
   results   <- reactiveVal(NULL)     # list with all output paths + objects
@@ -474,18 +479,30 @@ server <- function(input, output, session) {
     if (!file.exists(res$path_report)) {
       return(tags$div(class = "p-4 text-muted", "Report not yet generated."))
     }
-    # Shiny can't embed an external HTML file directly — offer a link
+
+    # Build URL relative to the registered resource path /suhii_data/
+    # path_report is like /data/<city>/Output/<city>_warm_2025_report.html
+    # → strip the data_root prefix and prepend the resource path.
+    rel <- sub(paste0("^", data_root, "/?"), "", res$path_report)
+    report_url <- paste0("suhii_data/", rel)
+
     tags$div(
-      class = "p-4",
-      tags$p("The full interactive report has been generated."),
-      tags$a(
-        class  = "btn btn-primary",
-        href   = paste0("/suhii/report/", basename(res$path_report)),
-        target = "_blank",
-        icon("external-link"), " Open report in new tab"
+      class = "p-2",
+      tags$div(
+        class = "mb-2 d-flex gap-2 align-items-center",
+        tags$a(
+          class  = "btn btn-primary btn-sm",
+          href   = report_url,
+          target = "_blank",
+          icon("external-link"), " Open in new tab"
+        ),
+        tags$span(class = "text-muted small",
+          "The report is a self-contained HTML file you can share or publish.")
       ),
-      tags$p(class = "text-muted small mt-2",
-        "The report is a self-contained HTML file you can share or publish.")
+      tags$iframe(
+        src    = report_url,
+        style  = "width:100%; height:80vh; border:1px solid #2a2a2a; border-radius:6px;"
+      )
     )
   })
 
