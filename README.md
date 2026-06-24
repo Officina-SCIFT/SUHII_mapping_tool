@@ -115,25 +115,9 @@ git clone https://github.com/Officina-SCIFT/SUHII_mapping_tool.git
 
 ### Step 3 — Add the key to the project
 
-Navigate to the project folder and duplicate the example credentials file:
-
-**Windows (PowerShell)**
-```powershell
-cd C:\Users\YourName\Desktop\SUHII_mapping_tool
-copy config\credentials.yml.example config\credentials.yml
-```
-
-**Mac / Linux (Terminal)**
-```bash
-cd ~/Desktop/SUHII_mapping_tool
-cp config/credentials.yml.example config/credentials.yml
-```
-
-> 💡 Replace `C:\Users\YourName\Desktop\SUHII_mapping_tool` (Windows) or `~/Desktop/SUHII_mapping_tool` (Mac/Linux)
-> with the actual path where you extracted or cloned the project.
-
+Navigate to the project folder, in the folder config.
 Now open `config/credentials.yml` with any text editor (Notepad, TextEdit, VS Code…)
-and replace the placeholder with your key:
+and replace the placeholder with your key (inside the quotation marks, do not remove them):
 
 ```yaml
 opentopography:
@@ -537,32 +521,17 @@ git clone https://github.com/Officina-SCIFT/SUHII_mapping_tool.git
 
 ### Passo 3 — Inserisci la chiave nel progetto
 
-Apri un terminale, spostati nella cartella del progetto e duplica il file di esempio:
+Accedi alla cartella del progetto, all'interno della cartella config.
+Ora apri il file `config/credentials.yml` con un editor di testo a tua scelta (Blocco note, TextEdit, VS Code…)
+e sostituisci il segnaposto con la tua chiave (all'interno delle virgolette, non rimuoverle):
 
-**Windows (PowerShell)**
-```powershell
-cd C:\Users\TuoNome\Desktop\SUHII_mapping_tool
-copy config\credentials.yml.example config\credentials.yml
-```
-
-**Mac / Linux (Terminale)**
-```bash
-cd ~/Desktop/SUHII_mapping_tool
-cp config/credentials.yml.example config/credentials.yml
-```
-
-> 💡 Sostituisci `C:\Users\TuoNome\Desktop\SUHII_mapping_tool` (Windows) o `~/Desktop/SUHII_mapping_tool` (Mac/Linux)
-> con il percorso reale dove hai estratto o clonato il progetto.
-
-Apri `config/credentials.yml` con un qualsiasi editor di testo (Blocco Note, TextEdit, VS Code…)
+apri `config/credentials.yml` con un qualsiasi editor di testo (Blocco Note, TextEdit, VS Code…)
 e sostituisci il placeholder con la tua chiave:
 
 ```yaml
 opentopography:
   api_key: "incolla-la-tua-chiave-qui"
 ```
-
-
 
 ---
 
