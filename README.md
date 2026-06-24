@@ -140,31 +140,53 @@ opentopography:
   api_key: "paste-your-key-here"
 ```
 
-
-
----
-
 ### Step 4 — Build and launch
 
-Open a terminal **inside the project folder** and run:
+Open a terminal **inside the project folder**.
 
-**Windows (PowerShell)**
-```powershell
-cd C:\Users\YourName\Desktop\SUHII_mapping_tool
-docker-compose up --build
-```
+**Easiest way — no typing required:**
 
-**Mac / Linux (Terminal)**
+- **Windows:** open the project folder in File Explorer, right-click on empty space, and choose **"Open in Terminal"**.
+- **Mac:** open the project folder in Finder, right-click on empty space, and choose **"New Terminal at Folder"**.
+  (If you don't see this option, enable it once in **System Settings → Keyboard → Keyboard Shortcuts → Services**.)
+
+**If that option is not available:**
+
+1. Open the project folder — the same one you downloaded/extracted in Step 1. It could be in `Desktop`, `Downloads`, `Documents`, or anywhere else you chose.
+2. Copy its full path:
+   - **Windows:** click once in the address bar at the top of File Explorer (it turns into editable text showing the full path) and copy it.
+   - **Mac:** drag the folder icon directly into the terminal window — the path is typed in automatically.
+3. In the terminal, type `cd ` (with a space after it), paste the path, and press Enter.
+
+   Example, in my PC is (your own path will be different, depending on where do you have your unzipped folder):
+   ```
+   cd C:\Users\chiara\Downloads\SUHII_mapping_tool
+   ```
+
+Then run:
+
 ```bash
-cd ~/Desktop/SUHII_mapping_tool
 docker-compose up --build
 ```
 
-> 💡 **Tip — navigate to the folder faster:**
-> In Windows Explorer or Mac Finder, open the project folder,
-> then right-click on an empty area and choose:
-> - **Windows** → *Open in Terminal* (or *Open PowerShell window here*)
-> - **Mac** → *New Terminal at Folder* (enable it in System Settings → Keyboard → Shortcuts → Services)
+> ⏳ **The first build takes 10–15 minutes** — this happens only once.
+> Docker is downloading R, Quarto, and all required packages (~1 GB).
+> You will see a long stream of installation messages: this is normal, not an error.
+> **Do not close the terminal.**
+>
+> All subsequent starts take under 30 seconds.
+
+When you see this line in the terminal, the app is ready:
+
+```
+suhii_app | [INFO] Starting listener on 0.0.0.0:3838
+```
+or also
+
+```
+[WARN] shiny-server - Running as root unnecessarily is a security risk! You could be running more securely as non-root.
+```
+---
 
 > ⏳ **The first build takes 10–15 minutes** — this happens only once.
 > Docker is downloading R, Quarto, and all required packages (~1 GB).
