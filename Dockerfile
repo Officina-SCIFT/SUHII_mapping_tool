@@ -12,7 +12,11 @@
 # Run:    docker-compose up
 # =============================================================================
 
-FROM rocker/shiny:4.4.0
+# --platform=linux/amd64 forces x86_64 emulation on Apple Silicon (M1/M2/M3)
+# Macs via Rosetta 2, since the GDAL/PROJ/GEOS toolchain below is only
+# verified against amd64. Slightly slower on Apple Silicon, but avoids
+# arch-specific build failures.
+FROM --platform=linux/amd64 rocker/shiny:4.4.0
 
 # ── System dependencies ───────────────────────────────────────────────────────
 # gdal, proj, geos   → terra / sf
