@@ -76,8 +76,8 @@ If you wish, you can also tell us your user story and the impact of your results
 
 ### What you need
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — that's it. No R, no Python, no packages to install manually. (After the installation, launch it!)
-- A free [OpenTopography API key](https://opentopography.org/developers) (takes 2 minutes to get).
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — that's it. (After the installation, remember to launch it!)
+- A free [OpenTopography API key](https://opentopography.org/) (takes 2 minutes to get).
 
 ---
 
@@ -107,7 +107,7 @@ git clone https://github.com/Officina-SCIFT/SUHII_mapping_tool.git
 
 ### Step 2 — Get your free API key
 
-1. Go to [opentopography.org/developers](https://opentopography.org/developers)
+1. Go to [opentopography.org](https://opentopography.org)
 2. Register (free, takes 2 minutes)
 3. Copy the API key from your profile
 
