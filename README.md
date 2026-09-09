@@ -179,15 +179,10 @@ or also
 >
 > All subsequent starts take under 30 seconds.
 
-When you see this line in the terminal, the app is ready:
-
-```
-suhii_app | [INFO] Starting listener on 0.0.0.0:3838
-```
-
----
 
 ### Step 5 — Open the app
+
+Ok, now you can open the following link and use the tool  
 
 👉 **[http://localhost:3838/suhii](http://localhost:3838/suhii)**
 
@@ -564,15 +559,23 @@ docker-compose up --build
 >
 > Gli avvii successivi richiedono meno di 30 secondi.
 
-Quando vedi questa riga nel terminale, l'app è pronta:
+
+Quando vedi questa linea nel terminale, l'app è pronta:
 
 ```
 suhii_app | [INFO] Starting listener on 0.0.0.0:3838
+```
+oppure anche:
+
+```
+[WARN] shiny-server - Running as root unnecessarily is a security risk! You could be running more securely as non-root.
 ```
 
 ---
 
 ### Passo 5 — Apri l'app
+
+Ora apri il link seguente e sei sull'app:
 
 👉 **[http://localhost:3838/suhii](http://localhost:3838/suhii)**
 
