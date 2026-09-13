@@ -333,18 +333,9 @@ Tested on Windows 11 Pro — 32 GB RAM, AMD Ryzen 7 2700X 3.70 GHz — across 40
 | 💾 RAM usage | ~17 GB | up to ~27 GB |
 | 🗺️ Area processed | ~2 160 km² | varies widely |
 
-Most of the time is spent on downloads, not computation:
+Most of the time is spent on downloads, not computation.
 
-```
-OSM download      [================    ]  ~4.6 min
-Landsat download  [================    ]  ~4.6 min
-DEM download      [=                   ]  ~0.3 min
-LST processing    [==                  ]  ~0.5 min
-SUHII calculation [====                ]  ~1.3 min
-Other             [                    ]  < 0.1 min
-```
-
-Large cities with extensive OSM data (e.g. Moscow) can reach ~120 min.
+Large cities with extensive OSM data (e.g. Moscow) can reach ~360 min.
 Download time is not simply proportional to city area — it depends on how
 OpenStreetMap maps the area (aggregated polygons vs individual building footprints).
 
@@ -726,18 +717,9 @@ Testato su Windows 11 Pro — 32 GB RAM, AMD Ryzen 7 2700X 3,70 GHz — su 40 ci
 | 💾 Utilizzo RAM | ~17 GB | fino a ~27 GB |
 | 🗺️ Area processata | ~2 160 km² | molto variabile |
 
-La maggior parte del tempo è impiegata nei download, non nel calcolo:
+La maggior parte del tempo è impiegata nei download, non nel calcolo.
 
-```
-Download OSM      [================    ]  ~4,6 min
-Download Landsat  [================    ]  ~4,6 min
-Download DEM      [=                   ]  ~0,3 min
-Elaborazione LST  [==                  ]  ~0,5 min
-Calcolo SUHII     [====                ]  ~1,3 min
-Altro             [                    ]  < 0,1 min
-```
-
-Le città più grandi con molti dati OSM (es. Mosca) possono raggiungere ~120 min.
+Le città più grandi con molti dati OSM (es. Mosca) possono raggiungere ~360 min.
 Il tempo di download non è semplicemente proporzionale all'area — dipende da come
 OpenStreetMap mappa la zona (poligoni aggregati vs singoli edifici).
 
