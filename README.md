@@ -197,11 +197,11 @@ Ok, now you can open the following link and use the tool
 
 > ☕ **Go grab a coffee — this takes a few minutes.**
 >
-> A typical analysis runs in **5–20 minutes** depending on city size.
+> A typical analysis runs in **5–20 minutes up to some hour** depending on city size.
 > This is not a page loading: the tool is downloading satellite imagery,
 > processing it, and computing thermal maps from scratch.
 > The progress log keeps you updated while it works.
-> Large cities (e.g. Moscow) can take up to ~2 hours.
+> Large cities (e.g. Moscow) can take up to ~4 hours.
 
 ---
 
@@ -581,11 +581,11 @@ Ora apri il link seguente e sei sull'app:
 
 > ☕ **Vai a farti un caffè — ci vogliono alcuni minuti.**
 >
-> Un'analisi tipica richiede **5–20 minuti** a seconda della dimensione della città.
+> Un'analisi tipica richiede **5–20 minuti fino a qualche ora** a seconda della dimensione della città e della macchina usata.
 > Non è una pagina che si carica: lo strumento sta scaricando immagini satellitari,
 > elaborandole e calcolando le mappe termiche da zero.
 > Il log di avanzamento ti aggiorna in tempo reale.
-> Le città più grandi (es. Mosca) possono richiedere fino a ~2 ore.
+> Le città più grandi (es. Mosca) possono richiedere fino a ~4 ore.
 
 ---
 
