@@ -8,18 +8,14 @@
 #   - Shiny Server (for the web UI)
 #   - System libraries needed by terra, sf, osmextract
 #
-# Build:  docker build -t suhii .
-# Run:    docker-compose up
-# =============================================================================
-
 # --platform=linux/amd64 forces x86_64 emulation on Apple Silicon (M1/M2/M3)
 # Macs via Rosetta 2, since the GDAL/PROJ/GEOS toolchain below is only
 # verified against amd64. Slightly slower on Apple Silicon, but avoids
 # arch-specific build failures.
 FROM --platform=linux/amd64 rocker/shiny:4.4.0
 
-# ── System dependencies ───────────────────────────────────────────────────────
-# gdal, proj, geos   → terra / sf
+# ── 1. System dependencies ─────────────────────────────────────────────────
+# gdal, proj, geos   → terra / sf / lwgeom
 # libudunits2        → units (sf dependency)
 # libssl, libcurl    → httr / rstac
 # pandoc             → quarto / rmarkdown
@@ -33,7 +29,9 @@ FROM --platform=linux/amd64 rocker/shiny:4.4.0
 # NOTA: i PPA in genere non conservano versioni vecchie. Se questo build
 # fallisce in futuro con "Version not found", il PPA ha rimosso queste
 # versioni: verificare le versioni disponibili con
-# `apt-cache madison gdal-bin` e aggiornare i pin qui sotto.
+# `apt-cache madison gdal-bin` e aggiornare i pin qui sotto — e ricordarsi
+# che un aggiornamento dei pin richiede SEMPRE di ricompilare il punto 4 per
+# intero (sf + terra + lwgeom insieme), mai un pacchetto alla volta.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     gnupg \
@@ -69,21 +67,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # se il build ripiega silenziosamente sui pacchetti jammy base, meglio saperlo qui).
 RUN gdal-config --version && geos-config --version && pkg-config --modversion proj
 
-# ── Quarto ────────────────────────────────────────────────────────────────────
-# Install the latest Quarto CLI (needed for render_report())
+# ── 2. Quarto ────────────────────────────────────────────────────────────
 ARG QUARTO_VERSION=1.5.57
 RUN wget -q "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb" \
     -O /tmp/quarto.deb \
     && dpkg -i /tmp/quarto.deb \
     && rm /tmp/quarto.deb
 
-# ── R packages ────────────────────────────────────────────────────────────────
-# Install all packages at build time so the container starts instantly.
-# Uses Posit Package Manager (P3M) for fast binary installs on Linux.
+# ── 3. Pacchetti R NON geospaziali — binari P3M (veloci, nessun link a ─────
+#       GDAL/GEOS/PROJ, nessun rischio ABI)
+# terra, sf e lwgeom NON compaiono qui: vengono installati SOLO al punto 4,
+# da sorgente, tutti insieme. Se li vedi ricomparire in questa lista in una
+# modifica futura, e' una regressione — rimuovili da qui.
 RUN R -e "\
 options(repos = c(P3M = 'https://packagemanager.posit.co/cran/__linux__/jammy/latest')); \
 pkgs <- c( \
-  'terra', 'tidyterra', 'sf', 'osmdata', 'rstac', 'elevatr', \
+  'tidyterra', 'osmdata', 'rstac', 'elevatr', \
   'dplyr', 'purrr', 'tidyr', 'tibble', 'scales', \
   'shiny', 'shinyWidgets', 'bslib', 'leaflet', 'leaflet.extras', \
   'ggplot2', 'plotly', 'colorRamps', 'colorspace', \
@@ -97,18 +96,20 @@ missing <- pkgs[!pkgs %in% installed.packages()[,'Package']]; \
 if (length(missing) > 0) stop('Pacchetti R non installati: ', paste(missing, collapse = ', ')) \
 "
 
-# ── Fix ABI mismatch ──────────────────────────────────────────────────────────
-# sf e lwgeom vengono normalmente installati come binari precompilati da P3M,
-# linkati contro la libproj.so.22 di jammy base. Il PPA ubuntugis-unstable ha
-# sostituito PROJ con la 9.3.1 (libproj.so.25): i binari precompilati restano
-# agganciati a una libreria che non esiste più. Forziamo la ricompilazione da
-# sorgente per allinearli alle librerie di sistema effettivamente presenti.
+# ── 4. Stack geospaziale — SEMPRE i tre insieme, SEMPRE da sorgente ────────
+# sf, terra e lwgeom vengono normalmente offerti come binari precompilati da
+# P3M, linkati contro la libproj di jammy base. Il PPA ubuntugis-unstable ha
+# sostituito PROJ con la 9.3.1: un binario precompilato agganciato alla
+# libreria precedente smette di funzionare. Forziamo la ricompilazione da
+# sorgente per allinearli alle librerie di sistema effettivamente presenti
+# — i tre pacchetti in UN SOLO comando, non uno alla volta.
 RUN R -e "\
-install.packages(c('sf', 'lwgeom'), type = 'source', repos = 'https://cran.r-project.org'); \
-library(sf); library(lwgeom) \
+install.packages(c('sf', 'terra', 'lwgeom'), type = 'source', repos = 'https://cran.r-project.org'); \
+library(sf); library(terra); library(lwgeom); \
+cat('Stack geospaziale OK\n') \
 "
 
-# ── App files ─────────────────────────────────────────────────────────────────
+# ── App files ─────────────────────────────────────────────────────────────
 # Copy the entire project into the Shiny Server app directory
 COPY . /srv/shiny-server/suhii/
 
@@ -116,11 +117,11 @@ COPY . /srv/shiny-server/suhii/
 RUN chown -R shiny:shiny /srv/shiny-server/suhii/ \
     && chmod -R 755 /srv/shiny-server/suhii/
 
-# ── Data volume mount point ───────────────────────────────────────────────────
+# ── Data volume mount point ───────────────────────────────────────────────
 # Output data is written here (mounted as a volume in docker-compose)
 RUN mkdir -p /data && chown -R shiny:shiny /data
 
-# ── Shiny Server config ───────────────────────────────────────────────────────
+# ── Shiny Server config ───────────────────────────────────────────────────
 COPY shiny-server.conf /etc/shiny-server/shiny-server.conf
 
 EXPOSE 3838
