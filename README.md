@@ -25,7 +25,7 @@ It uses three free data sources — no accounts required except one free API key
 | Data | Source | Account? |
 |:-----|:-------|:--------:|
 | 🛰️ Thermal satellite imagery | Landsat C2 L2 via Microsoft Planetary Computer | ✅ No |
-| 🗺️ Land use & urban areas | OpenStreetMap via Overpass API | ✅ No |
+| 🗺️ Land use & urban areas | OpenStreetMap via Geofabrik regional extracts (Overpass API as fallback) | ✅ No |
 | ⛰️ Elevation | SRTM GL1 DEM via OpenTopography | ⚠️ Free key needed |
 
 > **LST ≠ air temperature.**
@@ -190,10 +190,12 @@ Ok, now you can open the following link and use the tool
 
 ### Step 6 — Run an analysis
 
-1. Type a **city name** (use the name as it appears in OpenStreetMap)
-   → For small towns, add the province: `Bologna`
+1. Type a **city name**. Capitals, accents and small typos are tolerated.
+   → To tell homonyms apart add the region or country: `Phoenix, Arizona`, `Valencia, Spain`
 2. Click **Run analysis**
-3. Watch the progress log on the left sidebar
+3. A **map of the study area** appears: check that it is the municipality you mean and click **Confirm and run**
+   (if the name is ambiguous you are first asked which place you mean)
+4. Watch the progress log on the left sidebar
 
 > ☕ **Go grab a coffee — this takes a few minutes.**
 >
@@ -239,10 +241,16 @@ Your data in `data/` is preserved.
 
 ## Troubleshooting
 
-**"Cannot geocode city"**
-→ The city name must match its OpenStreetMap entry exactly.
-Add the province for small towns: `Bologna`.
+**"No populated place found" / "is ambiguous"**
+→ Add the region or country (`Springfield, Illinois`, `Valencia, Spain`), or set the country code under *Advanced*.
 Check at [nominatim.openstreetmap.org](https://nominatim.openstreetmap.org/).
+The study area is always the municipality boundary. For a different perimeter (for example only the dense city of a megacity) upload your own polygon under *Advanced* (GeoPackage, GeoJSON or zipped shapefile).
+
+**"This is NOT a municipal boundary"** (warning on the confirmation map)
+→ No boundary polygon was found and the area is a bounding box. Cancel and upload your own boundary unless the box is what you want.
+
+**OSM download falls back to Overpass**
+→ The Geofabrik regional extract could not be used (see the console for the reason). Overpass is slower and its public servers can leave gaps; re-run later or check the log.
 
 **"OpenTopography API key missing"**
 → Check that `config/credentials.yml` exists and contains your key — not the placeholder text.
@@ -269,7 +277,8 @@ Try `docker-compose down`, then `docker-compose up --build`.
 ├─────────────────────────────────────────────────────────────────┤
 │  2) Data download  →  Landsat 8-9 (ST + QA bands)               │
 │                       Digital Elevation Model (SRTM)            │
-│                       Urban & rural areas (OpenStreetMap)       │
+│                       Urban & rural areas (OpenStreetMap:       │
+│                       Geofabrik extract, Overpass fallback)     │
 ├─────────────────────────────────────────────────────────────────┤
 │  3) Pre-processing →  cloud masking, offset & scaling,          │
 │                       LST conversion (°C), season mean          │
@@ -286,6 +295,14 @@ The tool segments the city into **100 m elevation bands** and computes
 thermal anomalies within each band independently. This corrects for
 altitude differences between urban and rural areas, making results
 reliable for hilly and mountainous cities too.
+
+### Study area and OpenStreetMap data
+
+**Study area.** The name is searched on Nominatim with a ladder of queries (matching ignores capitals and accents and tolerates small typos, against every OSM name of the place). A second source (Overpass boundaries) cross-checks the result, ambiguous names stop the run and ask you to choose, and you confirm the boundary on a map before anything is downloaded. There is no size limit: megacities are allowed. Parts of the boundary more than 25 km from its main part (remote islands) are ignored.
+
+**OSM data.** The tool picks, automatically, the smallest [Geofabrik](https://download.geofabrik.de/) regional extract covering the study area (or a mosaic of extracts for borders and very large regions), downloads it once, and reads only the study-area polygons with GDAL. Extracts are cached in `data/_pbf_cache` (can use several GB) and refreshed when Geofabrik publishes a new version. The source, extract date and feature counts are saved in `Input/osm_source.json`. If Geofabrik cannot be used, the tool falls back to the Overpass API.
+
+Known limits: Geofabrik extracts are updated daily (not live); heavy automated use is subject to Geofabrik's usage policy; the DEM and Landsat caches are not invalidated automatically if you change the study area of a city that was already processed (delete that city's folder in `data/`); the performance figures below were measured with the previous Overpass-only download.
 
 ---
 
@@ -426,7 +443,7 @@ Usa tre fonti di dati gratuite — nessun account necessario tranne una chiave A
 | Dato | Fonte | Account? |
 |:-----|:------|:--------:|
 | 🛰️ Immagini termiche satellitari | Landsat C2 L2 via Microsoft Planetary Computer | ✅ No |
-| 🗺️ Uso del suolo e aree urbane | OpenStreetMap via Overpass API | ✅ No |
+| 🗺️ Uso del suolo e aree urbane | OpenStreetMap tramite estratti regionali Geofabrik (Overpass API come ripiego) | ✅ No |
 | ⛰️ Quota altimetrica | SRTM GL1 DEM via OpenTopography | ⚠️ Chiave gratuita necessaria |
 
 > **LST ≠ temperatura dell'aria.**
@@ -574,10 +591,12 @@ Ora apri il link seguente e sei sull'app:
 
 ### Passo 6 — Esegui un'analisi
 
-1. Scrivi il **nome della città** (usa il nome come appare in OpenStreetMap)
-   → Per comuni piccoli aggiungi la provincia: `Bologna`
+1. Scrivi il **nome della città**. Maiuscole, accenti e piccoli errori di battitura sono tollerati.
+   → Per distinguere gli omonimi aggiungi regione o paese: `Phoenix, Arizona`, `Valencia, Spain`
 2. Clicca **Run analysis**
-3. Segui il log di avanzamento nella barra laterale sinistra
+3. Compare una **mappa dell'area di studio**: controlla che sia il comune che intendi e clicca **Confirm and run**
+   (se il nome è ambiguo ti viene prima chiesto quale luogo intendi)
+4. Segui il log di avanzamento nella barra laterale sinistra
 
 > ☕ **Vai a farti un caffè — ci vogliono alcuni minuti.**
 >
@@ -623,10 +642,16 @@ I dati nella cartella `data/` vengono conservati.
 
 ## Risoluzione dei problemi
 
-**"Cannot geocode city"**
-→ Il nome della città deve corrispondere esattamente alla voce in OpenStreetMap.
-Per comuni piccoli aggiungi la provincia: `Bologna`.
+**"No populated place found" / "is ambiguous"**
+→ Aggiungi regione o paese (`Springfield, Illinois`, `Valencia, Spain`), oppure imposta il codice paese in *Advanced*.
 Verifica su [nominatim.openstreetmap.org](https://nominatim.openstreetmap.org/).
+L'area di studio è sempre il confine del comune. Per un perimetro diverso (per esempio solo la città densa di una megacity) carica il tuo poligono in *Advanced* (GeoPackage, GeoJSON o shapefile in formato zip).
+
+**"This is NOT a municipal boundary"** (avviso sulla mappa di conferma)
+→ Non è stato trovato un poligono di confine e l'area è un bounding box. Annulla e carica il tuo confine, a meno che il rettangolo non sia ciò che vuoi.
+
+**Il download OSM ripiega su Overpass**
+→ L'estratto regionale Geofabrik non è stato utilizzabile (il motivo è nella console). Overpass è più lento e i suoi server pubblici possono lasciare buchi; riprova più tardi o controlla il log.
 
 **"OpenTopography API key missing"**
 → Controlla che il file `config/credentials.yml` esista e contenga la tua chiave — non il testo placeholder.
@@ -653,7 +678,8 @@ Prova `docker-compose down` e poi `docker-compose up --build`.
 ├─────────────────────────────────────────────────────────────────┤
 │  2) Download dati  →  Landsat 8-9 (bande ST + QA)               │
 │                       Modello digitale del terreno (SRTM)       │
-│                       Aree urbane e rurali (OpenStreetMap)      │
+│                       Aree urbane e rurali (OpenStreetMap:      │
+│                       estratto Geofabrik, ripiego Overpass)     │
 ├─────────────────────────────────────────────────────────────────┤
 │  3) Pre-processing →  mascheratura nuvole, scaling,             │
 │                       conversione LST (°C), media stagionale    │
@@ -670,6 +696,14 @@ Lo strumento divide la città in **fasce altimetriche da 100 m** e calcola le
 anomalie termiche indipendentemente per ciascuna fascia. Questo corregge le
 differenze di quota tra aree urbane e rurali, rendendo i risultati affidabili
 anche per città collinari e montane.
+
+### Area di studio e dati OpenStreetMap
+
+**Area di studio.** Il nome viene cercato su Nominatim con una scala di interrogazioni (il confronto ignora maiuscole e accenti e tollera piccoli errori, rispetto a tutti i nomi OSM del luogo). Una seconda fonte (confini amministrativi da Overpass) verifica il risultato, i nomi ambigui fermano l'esecuzione e ti chiedono di scegliere, e il confine va confermato su mappa prima di qualsiasi download. Non c'è un limite di dimensione: le megacity sono ammesse. Le parti del confine a più di 25 km dalla parte principale (isole remote) vengono ignorate.
+
+**Dati OSM.** Lo strumento sceglie in automatico il più piccolo estratto regionale [Geofabrik](https://download.geofabrik.de/) che copre l'area di studio (o un mosaico di estratti ai confini e per regioni molto grandi), lo scarica una sola volta e legge con GDAL solo i poligoni dell'area. Gli estratti sono conservati in `data/_pbf_cache` (possono occupare diversi GB) e riscaricati quando Geofabrik pubblica una nuova versione. Fonte, data dell'estratto e conteggi sono salvati in `Input/osm_source.json`. Se Geofabrik non è utilizzabile, lo strumento ripiega sull'API Overpass.
+
+Limiti noti: gli estratti Geofabrik sono aggiornati ogni giorno (non in tempo reale); l'uso automatico intensivo è soggetto alla policy di Geofabrik; le cache di DEM e Landsat non vengono invalidate automaticamente se cambi l'area di studio di una città già elaborata (elimina la cartella di quella città in `data/`); i dati di performance qui sotto sono stati misurati con il precedente download solo Overpass.
 
 ---
 

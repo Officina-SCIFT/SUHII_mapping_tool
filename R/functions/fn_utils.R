@@ -13,11 +13,15 @@
 #   city, working_dir, season, max_cloud, altitude_band_height : user params
 #   credentials_file : path to credentials.yml
 #   project_root     : resolved by run.R before sourcing this file
+#   country, user_polygon, choice : optional AOI hints, see resolve_aoi()
+#   aoi_res          : a ready AOI from resolve_aoi() (skips geocoding)
 #
 # Returns: named list with all config values needed by downstream functions.
 # -----------------------------------------------------------------------------
 setup <- function(city, working_dir, season, max_cloud,
-                  altitude_band_height, credentials_file, project_root) {
+                  altitude_band_height, credentials_file, project_root,
+                  country = NULL, user_polygon = NULL, choice = NULL,
+                  aoi_res = NULL) {
 
   cli::cli_h1("SUHII Mapping — Setup")
 
@@ -50,92 +54,36 @@ setup <- function(city, working_dir, season, max_cloud,
     ))
   }
 
-  # ── Bounding box via Nominatim ─────────────────────────────────────────────
-  # NOT using osmdata::getbb()'s featuretype filter: internally osmdata sends
-  # the query parameter as "featuretype" (lowercase), but Nominatim's API
-  # expects the case-sensitive "featureType" (capital T) and silently ignores
-  # the filter when the case doesn't match, falling back to unrestricted
-  # ranking. This let a same-named province ("Provincia di Cuneo") outrank
-  # the city even when featuretype = "city" was passed to getbb() — the
-  # filter never reached Nominatim correctly. Querying Nominatim directly
-  # sidesteps the bug entirely.
-  cli::cli_alert_info("Resolving bounding box for '{city}'...")
-
-  # Among same-named candidates (e.g. "Cuneo" the comune vs "Provincia di
-  # Cuneo"), the city/comune footprint is always smaller than a same-named
-  # province/region's — picking the smallest candidate is a robust,
-  # filter-independent disambiguation, not reliant on Nominatim's featureType
-  # (which even when correctly cased can behave surprisingly on OSM data;
-  # see https://github.com/osm-search/Nominatim/discussions/3161).
-  .geocode_city_bbox <- function(city) {
-    resp <- tryCatch(
-      httr::GET("https://nominatim.openstreetmap.org/search",
-        query = list(q = city, format = "jsonv2", addressdetails = 1, limit = 10),
-        httr::add_headers("User-Agent" = "SUHII_mapping/1.0 (heat island research)"),
-        httr::timeout(30)),
-      error = function(e) NULL)
-
-    if (is.null(resp) || httr::status_code(resp) != 200) return(NULL)
-
-    results <- tryCatch(
-      jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"),
-                          simplifyDataFrame = TRUE),
-      error = function(e) NULL)
-
-    if (is.null(results) || !is.data.frame(results) || nrow(results) == 0) return(NULL)
-
-    # Prefer settlement-type matches when present; otherwise keep every
-    # candidate Nominatim returned (covers small places OSM tags loosely).
-    addresstype <- results$addresstype %||% rep(NA_character_, nrow(results))
-    is_settlement <- addresstype %in% c("city", "town", "village", "municipality", "hamlet")
-    candidates <- if (any(is_settlement, na.rm = TRUE)) results[is_settlement, ] else results
-    if (nrow(candidates) == 0) return(NULL)
-
-    # Nominatim boundingbox order: [south, north, west, east] (strings)
-    bbn   <- lapply(candidates$boundingbox, as.numeric)
-    areas <- vapply(bbn, function(b) {
-      lat_km <- abs(b[2] - b[1]) * 110.57
-      lon_km <- abs(b[4] - b[3]) * 111.32 * cos(mean(b[1:2]) * pi / 180)
-      lat_km * lon_km
-    }, numeric(1))
-
-    b <- bbn[[which.min(areas)]]
-    matrix(c(b[3], b[4], b[1], b[2]), nrow = 2, byrow = TRUE,
-           dimnames = list(c("x","y"), c("min","max")))
+  # ── Study area (AOI) ────────────────────────────────────────────────────────
+  # resolve_aoi() (fn_geocode.R) finds the municipality boundary and its bbox:
+  # tolerant name matching, a second-source check, ambiguity detection, and an
+  # optional user-supplied polygon. It replaces the old "smallest Nominatim
+  # bbox" rule, which could silently return a wrong place (and for megacities
+  # a bbox covering islands or a whole prefecture).
+  #
+  # A pre-resolved AOI (e.g. confirmed by the user in the Shiny preview) can be
+  # passed in `aoi_res`, so the geocoding is not repeated.
+  if (is.null(aoi_res)) {
+    cli::cli_alert_info("Resolving the study area for '{city}'...")
+    aoi_res <- tryCatch(
+      resolve_aoi(city, country = country, user_polygon = user_polygon, choice = choice),
+      suhii_ambiguous = function(e) {
+        tab <- e$candidates[, intersect(c("id", "nome", "addresstype", "importance"), names(e$candidates))]
+        cli::cli_abort(c(conditionMessage(e),
+          "i" = "Candidates: {paste(tab$id, '=', tab$nome, collapse = ' | ')}"))
+      },
+      error = function(e) cli::cli_abort(c(
+        conditionMessage(e),
+        "i" = "Verify at: https://nominatim.openstreetmap.org/?q={utils::URLencode(city)}"
+      )))
   }
-
-  aoi_bb <- tryCatch(.geocode_city_bbox(city), error = function(e) NULL)
-
-  if (is.null(aoi_bb) || !all(is.finite(aoi_bb))) {
-    cli::cli_abort(c(
-      "Cannot geocode: '{city}'",
-      "i" = "Check the name matches its OpenStreetMap entry.",
-      "i" = "For small municipalities try adding the province, e.g. 'Trofarello, Torino'",
-      "i" = "Verify at: https://nominatim.openstreetmap.org/?q={utils::URLencode(city)}"
-    ))
-  }
+  aoi_bb <- aoi_res$aoi_bb
 
   cli::cli_alert_success(
     "Bounding box: lon [{round(aoi_bb['x','min'],4)}, {round(aoi_bb['x','max'],4)}]  \\
-     lat [{round(aoi_bb['y','min'],4)}, {round(aoi_bb['y','max'],4)}]"
+     lat [{round(aoi_bb['y','min'],4)}, {round(aoi_bb['y','max'],4)}]  \\
+     ({round(aoi_res$area_km2)} km\u00b2, {aoi_res$source})"
   )
-
-  # Rough plausibility check on the RECTANGULAR bbox (not the true polygon
-  # area — that isn't known yet at this point) so a geocoding mismatch is
-  # caught here, before any download starts, instead of ~1h20 into OSM/
-  # Landsat downloads. A real municipality's bbox rarely exceeds ~1500 km²;
-  # provinces/regions with a same-sounding name routinely do.
-  lon_km <- (aoi_bb["x","max"] - aoi_bb["x","min"]) * 111.32 *
-              cos(mean(aoi_bb["y",]) * pi / 180)
-  lat_km <- (aoi_bb["y","max"] - aoi_bb["y","min"]) * 110.57
-  bbox_area_km2 <- lon_km * lat_km
-  if (is.finite(bbox_area_km2) && bbox_area_km2 > 1500) {
-    cli::cli_alert_warning(c(
-      "Bounding box area is ~{round(bbox_area_km2)} km\u00b2 \u2014 unusually large for a single municipality.",
-      "i" = "Nominatim may have matched a province/region with the same name instead of the city.",
-      "i" = "Verify at: https://nominatim.openstreetmap.org/?q={utils::URLencode(city)}"
-    ))
-  }
 
   # City slug: replace spaces with underscores for safe file/folder names
   # e.g. "Los Angeles" → "Los_Angeles", "São Paulo" → "São_Paulo"
@@ -165,7 +113,9 @@ setup <- function(city, working_dir, season, max_cloud,
     landsat    = file.path(working_dir, city_slug, "Input", "Landsat"),
     output     = file.path(working_dir, city_slug, "Output"),
     processing = file.path(working_dir, city_slug, "Processing"),
-    pbf_cache  = file.path(working_dir, city_slug, "Input", "pbf_cache")
+    # Geofabrik .osm.pbf cache, SHARED by all cities (one regional file serves
+    # many cities; a per-city copy would waste several GB).
+    pbf_cache  = file.path(working_dir, "_pbf_cache")
   )
   for (d in dirs) dir.create(d, showWarnings = FALSE, recursive = TRUE)
 
@@ -184,6 +134,7 @@ setup <- function(city, working_dir, season, max_cloud,
     city_name            = city,
     city_slug            = city_slug,
     aoi_bb               = aoi_bb,
+    aoi_res              = aoi_res,
     dirs                 = dirs,
     ot_key               = ot_key,
     season               = season,

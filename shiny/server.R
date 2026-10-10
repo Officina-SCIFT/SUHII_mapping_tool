@@ -134,36 +134,135 @@ server <- function(input, output, session) {
     session$sendCustomMessage("scrollLog", list())
   })
 
-  # ── Run button ───────────────────────────────────────────────────────────────
+  # ── Run button: step 1 = resolve the study area and ask for confirmation ───
+  # Nothing is downloaded until the user has seen the boundary on a map: a
+  # plausible-but-wrong place is otherwise only noticed after an hour of
+  # downloads. Ambiguous names (Valencia, Springfield) open a chooser first.
+  pending <- reactiveVal(NULL)   # list(city, aoi_res) awaiting confirmation
+  amb_city <- reactiveVal(NULL)  # city string for which a choice is requested
+
+  resolve_and_confirm <- function(city, choice = NULL) {
+    res <- withProgress(message = sprintf("Locating %s...", city), value = 0.5, {
+      tryCatch(
+        resolve_aoi(city,
+                    country      = trimws(input$country %||% ""),
+                    user_polygon = if (!is.null(input$user_boundary)) input$user_boundary$datapath else NULL,
+                    choice       = choice),
+        error = function(e) e)
+    })
+
+    if (inherits(res, "suhii_ambiguous")) {
+      amb_city(city)
+      cand <- res$candidates
+      labels <- sprintf("%s  [%s%s]", cand$nome, cand$addresstype,
+                        ifelse(is.na(cand$importance), "", sprintf(", importance %.2f", cand$importance)))
+      add_log(conditionMessage(res), "warn")
+      showModal(modalDialog(
+        title = "Which place do you mean?",
+        tags$p(conditionMessage(res)),
+        radioButtons("amb_choice", NULL, choices = stats::setNames(cand$id, labels)),
+        footer = tagList(actionButton("amb_cancel", "Cancel"),
+                         actionButton("amb_ok", "Use this place", class = "btn-primary")),
+        easyClose = FALSE))
+      return(invisible(NULL))
+    }
+    if (inherits(res, "error")) {
+      add_log(sprintf("Cannot resolve the study area: %s", conditionMessage(res)), "error")
+      running(FALSE)
+      return(invisible(NULL))
+    }
+
+    for (w in res$warnings) add_log(w, "warn")
+    pending(list(city = city, aoi = res))
+    showModal(modalDialog(
+      title = sprintf("Confirm the study area: %s", city),
+      tags$p(tags$strong(res$name)),
+      tags$p(class = "small",
+             sprintf("Source: %s. %s. Area: %s km\u00b2.", res$source, res$verification,
+                     format(round(res$area_km2), big.mark = ","))),
+      if (isTRUE(res$bbox_synthetic)) tags$div(
+        class = "alert alert-warning small",
+        tags$strong("This is NOT a municipal boundary. "),
+        "No polygon was found, so the area is a bounding box. ",
+        "Cancel and upload your own boundary (Advanced) unless this is what you want."),
+      leafletOutput("aoi_preview", height = "380px"),
+      tags$p(class = "small text-muted mt-2",
+             "Solid line: the area analysed. Dashed rectangle: the bounding box used to",
+             "download satellite and OSM data."),
+      footer = tagList(actionButton("aoi_cancel", "Cancel"),
+                       actionButton("aoi_confirm", "Confirm and run", class = "btn-primary")),
+      size = "l", easyClose = FALSE))
+    invisible(NULL)
+  }
+
+  output$aoi_preview <- renderLeaflet({
+    p <- pending(); req(p)
+    a <- p$aoi; bb <- a$aoi_bb
+    leaflet() |>
+      addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
+      addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+      addPolygons(data = sf::st_sf(geometry = a$geom), color = "#d73027", weight = 2,
+                  fillOpacity = 0.12) |>
+      addRectangles(lng1 = bb["x", "min"], lat1 = bb["y", "min"],
+                    lng2 = bb["x", "max"], lat2 = bb["y", "max"],
+                    fill = FALSE, color = "#555555", weight = 1, dashArray = "5,5") |>
+      fitBounds(bb["x", "min"], bb["y", "min"], bb["x", "max"], bb["y", "max"]) |>
+      addLayersControl(baseGroups = c("Light", "Satellite"),
+                       options = layersControlOptions(collapsed = TRUE))
+  })
+
   observeEvent(input$run_btn, {
     req(!running())
 
     # Reset state
     log_msgs(character(0))
     results(NULL)
+    pending(NULL)
     running(TRUE)
 
-    # Capture inputs (must be done in the reactive context)
-    city                 <- trimws(input$city)
+    city <- trimws(input$city)
+    if (!nzchar(city) && is.null(input$user_boundary)) {
+      add_log("City name cannot be empty.", "error")
+      running(FALSE)
+      return()
+    }
+    if (!nzchar(city)) city <- tools::file_path_sans_ext(input$user_boundary$name)
+
+    add_log(sprintf("Locating '%s'...", city))
+    resolve_and_confirm(city)
+  })
+
+  observeEvent(input$amb_ok, {
+    removeModal()
+    resolve_and_confirm(amb_city(), choice = input$amb_choice)
+  })
+  observeEvent(input$amb_cancel, { removeModal(); add_log("Cancelled.", "info"); running(FALSE) })
+  observeEvent(input$aoi_cancel, {
+    removeModal(); pending(NULL); add_log("Cancelled: study area not confirmed.", "info"); running(FALSE)
+  })
+
+  # ── Step 2: confirmed -> run the full workflow ──────────────────────────────
+  observeEvent(input$aoi_confirm, {
+    removeModal()
+    p <- pending(); req(p)
+    city      <- p$city
+    aoi_res   <- p$aoi
+    osm_source <- input$osm_source %||% "auto"
+
     # Fixed parameters — not exposed to the user
     working_dir          <- "/data"   # always /data inside Docker
     season               <- "warm"    # cold season not yet implemented
     max_cloud            <- 30L       # recommended default
     altitude_band_height <- 100L      # 100 m elevation bands
 
-    # Basic client-side validation
-    if (!nzchar(city)) {
-      add_log("City name cannot be empty.", "error")
-      running(FALSE)
-      return()
-    }
-
-    add_log(sprintf("Starting analysis for '%s'...", city))
+    add_log(sprintf("Study area confirmed: %s (%s, %s km\u00b2).", aoi_res$name, aoi_res$source,
+                    format(round(aoi_res$area_km2), big.mark = ",")), "ok")
 
     # ── Run workflow (withProgress keeps UI responsive) ──────────────────────
     withProgress(message = sprintf("Analysing %s...", city), value = 0, {
 
-      tryCatch({
+      stack_txt <- NULL   # call stack captured at the moment of the error
+      tryCatch(withCallingHandlers({
 
         # Step 1: Setup
         setProgress(0.05, detail = "Validating inputs...")
@@ -175,16 +274,21 @@ server <- function(input, output, session) {
           max_cloud            = max_cloud,
           altitude_band_height = altitude_band_height,
           credentials_file     = CREDENTIALS,
-          project_root         = PROJECT_ROOT
+          project_root         = PROJECT_ROOT,
+          aoi_res              = aoi_res
         )
-        add_log(sprintf("City: %s | Season: %s | Cloud ≤ %d%%",
+        add_log(sprintf("City: %s | Season: %s | Cloud \u2264 %d%%",
                         cfg$city_name, cfg$season, cfg$max_cloud), "ok")
 
         # Step 2: OSM
         setProgress(0.10, detail = "Downloading OSM data...")
-        add_log("Downloading OpenStreetMap data (may take a few minutes)...")
-        osm <- download_osm(cfg$city_name, cfg$aoi_bb, cfg$dirs)
-        add_log("OSM download complete.", "ok")
+        add_log("Downloading OpenStreetMap data (Geofabrik regional extract; a few minutes)...")
+        osm <- download_osm(cfg$city_name, cfg$aoi_bb, cfg$dirs,
+                            aoi_res = cfg$aoi_res, osm_source = osm_source)
+        add_log(sprintf("OSM data ready (source: %s).", osm$strategy), "ok")
+        if (identical(osm$strategy, "overpass") && !identical(osm_source, "overpass")) {
+          add_log("Geofabrik was not usable: Overpass was used instead (slower, and big queries can leave gaps). See the console for the reason.", "warn")
+        }
 
         # Step 3: Landsat
         setProgress(0.25, detail = "Downloading Landsat imagery...")
@@ -284,11 +388,22 @@ server <- function(input, output, session) {
         add_log(sprintf("Analysis complete. Outputs saved to %s", cfg$dirs$output), "ok")
 
       }, error = function(e) {
+        # Keep the innermost calls (where the error really happened): the
+        # message alone ("attempt to set an attribute on NULL") does not say where.
+        cl <- rev(sys.calls())[-(1:2)]   # drop the handler's own frames
+        cl <- vapply(utils::head(cl, 12), function(x) substr(paste(deparse(x), collapse = " "), 1, 110), "")
+        stack_txt <<- cl
+      }), error = function(e) {
         add_log(sprintf("Error: %s", conditionMessage(e)), "error")
+        if (!is.null(stack_txt)) {
+          message("[SUHII] call stack (innermost first):\n", paste0("  ", stack_txt, collapse = "\n"))
+          add_log(sprintf("Where: %s", paste(utils::head(stack_txt, 4), collapse = "  <-  ")), "warn")
+        }
         add_log("Check the inputs and try again.", "warn")
       })
     })
 
+    pending(NULL)
     running(FALSE)
   })
 
@@ -315,7 +430,7 @@ server <- function(input, output, session) {
     pal  <- colorNumeric("Spectral", domain = rng,
                           reverse = TRUE, na.color = "transparent")
     leaflet() |>
-      addProviderTiles("CartoDB.Positron", group = "Light") |>
+      addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
       addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
       addRasterImage(r, colors = pal, opacity = 0.8, group = "Mean LST") |>
       addLegend("bottomright", pal = pal, values = rng,
@@ -334,7 +449,7 @@ server <- function(input, output, session) {
     r   <- to_4326(terra::rast(res$path_classified), method = "near")
     pal <- colorFactor(CLASS_COLOURS, domain = 1:6, na.color = "transparent")
     leaflet() |>
-      addProviderTiles("CartoDB.Positron", group = "Light") |>
+      addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
       addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
       addRasterImage(r, colors = pal, opacity = 0.8, method = "ngb", group = "SUHII classes") |>
       addLegend("bottomright", colors = CLASS_COLOURS, labels = CLASS_NAMES,
@@ -354,7 +469,7 @@ server <- function(input, output, session) {
     pal <- colorNumeric(c("#ffffcc","#feb24c","#f03b20","#bd0026"),
                          domain = c(0,1), na.color = "transparent")
     leaflet() |>
-      addProviderTiles("CartoDB.Positron", group = "Light") |>
+      addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
       addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
       addRasterImage(r, colors = pal, opacity = 0.85, group = "Priority index") |>
       addLegend("bottomright", pal = pal, values = c(0,1),
@@ -376,7 +491,7 @@ server <- function(input, output, session) {
     max_d <- max(vals, na.rm = TRUE)
     pal  <- colorNumeric("YlOrRd", domain = c(300, max_d), na.color = "transparent")
     leaflet() |>
-      addProviderTiles("CartoDB.Positron", group = "Light") |>
+      addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
       addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
       addRasterImage(r, colors = pal, opacity = 0.8, group = "Distance to green") |>
       addLegend("bottomright", pal = pal, values = c(300L, as.integer(max_d)),

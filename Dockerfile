@@ -87,8 +87,8 @@ pkgs <- c( \
   'shiny', 'shinyWidgets', 'bslib', 'leaflet', 'leaflet.extras', \
   'ggplot2', 'plotly', 'colorRamps', 'colorspace', \
   'quarto', 'knitr', 'kableExtra', \
-  'lubridate', 'httr', 'kgc', \
-  'jsonlite', 'yaml', 'cli', \
+  'lubridate', 'httr', 'curl', 'kgc', \
+  'jsonlite', 'yaml', 'cli', 'maps', 'stringi', \
   'sp', 'sfdep', 'spdep' \
 ); \
 install.packages(pkgs, dependencies = TRUE); \
@@ -107,6 +107,18 @@ RUN R -e "\
 install.packages(c('sf', 'terra', 'lwgeom'), type = 'source', repos = 'https://cran.r-project.org'); \
 library(sf); library(terra); library(lwgeom); \
 cat('Stack geospaziale OK\n') \
+"
+
+# ── 5. osmextract (OSM from Geofabrik extracts) — DOPO sf/terra/lwgeom ────────
+# osmextract dipende da sf: installarlo al punto 3 farebbe scaricare un sf
+# binario P3M agganciato alla libproj sbagliata (vedi nota al punto 4). Qui sf
+# e' gia' installato da sorgente, quindi osmextract lo trova e non lo sostituisce.
+# Segnala se GDAL non ha il driver OSM (necessario per leggere i .pbf): in quel
+# caso il build NON fallisce, il tool ripiega su Overpass (vedi download_osm()).
+RUN R -e "\
+install.packages('osmextract', repos = 'https://cran.r-project.org'); \
+library(osmextract); library(sf); \
+if (!'OSM' %in% sf::st_drivers()\$name) cat('ATTENZIONE: GDAL senza driver OSM, Geofabrik non utilizzabile: il tool usera Overpass\n') else cat('osmextract OK, driver OSM presente\n') \
 "
 
 # ── App files ─────────────────────────────────────────────────────────────

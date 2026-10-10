@@ -279,7 +279,7 @@ pal_lst <- colorNumeric(
 )
 
 leaflet(options = leafletOptions(minZoom = 8)) |>
-  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
   addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
   addRasterImage(lst_wgs, colors = pal_lst, opacity = 0.80,
                  group = "Mean LST") |>
@@ -343,7 +343,7 @@ pal_cls <- colorFactor(
 )
 
 leaflet(options = leafletOptions(minZoom = 8)) |>
-  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
   addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
   addRasterImage(cls_wgs, colors = pal_cls, opacity = 0.80,
                  method = "ngb", group = "SUHII classes") |>
@@ -453,7 +453,7 @@ pal_suhi <- colorNumeric(
 )
 
 leaflet(options = leafletOptions(minZoom = 8)) |>
-  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
   addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
   addRasterImage(suhi_wgs, colors = pal_suhi, opacity = 0.80,
                  group = "SUHII index") |>
@@ -495,7 +495,7 @@ pal_dist <- colorNumeric(
 )
 
 leaflet(options = leafletOptions(minZoom = 8)) |>
-  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
   addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
   addRasterImage(dist_wgs, colors = pal_dist, opacity = 0.80,
                  group = "Green deficit") |>
@@ -552,7 +552,7 @@ pal_prio <- colorNumeric(
 )
 
 leaflet(options = leafletOptions(minZoom = 8)) |>
-  addProviderTiles("CartoDB.Positron", group = "Light") |>
+  addProviderTiles("OpenStreetMap.Mapnik", group = "Light") |>
   addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
   addRasterImage(prio_wgs, colors = pal_prio, opacity = 0.85,
                  group = "Priority") |>
@@ -663,7 +663,8 @@ t(stats) |>
 - R `r R.version$major`.`r R.version$minor` [@rcoreteam]
 - terra `r packageVersion("terra")` [@hijmans2022]
 - rstac `r packageVersion("rstac")` — STAC API client
-- osmdata `r packageVersion("osmdata")` — OSM data
+- osmdata `r packageVersion("osmdata")` — OSM data (Overpass strategy)
+- osmextract `r if (requireNamespace("osmextract", quietly = TRUE)) as.character(packageVersion("osmextract")) else "not installed"` — OSM data from Geofabrik regional extracts (extract name and date: `Input/osm_source.json`)
 - Landsat Collection 2 Level 2, USGS / Microsoft Planetary Computer [@usgs_c2l2]
 - SRTM GL1 DEM, OpenTopography [@farr2007]
 - OpenStreetMap contributors, ODbL licence

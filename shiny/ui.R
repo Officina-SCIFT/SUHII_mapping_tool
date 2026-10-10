@@ -181,9 +181,44 @@ ui <- page_sidebar(
       placeholder = "e.g. Florence, Berlin, São Paulo"
     ),
     tags$div(
+      class = "text-muted small mb-2",
+      "Capitals, accents and small typos are tolerated.",
+      "To tell homonyms apart add the region or country: ",
+      tags$code("Phoenix, Arizona"), ", ", tags$code("Valencia, Spain"), "."
+    ),
+    tags$div(
       class = "text-muted small mb-3",
-      "Use the name as it appears in OpenStreetMap.",
-      "For small towns add the province: ", tags$code("Trofarello, Torino"), "."
+      "The study area is always the municipality boundary. You will see it on a",
+      "map and confirm it before anything is downloaded."
+    ),
+    accordion(
+      open = FALSE,
+      accordion_panel(
+        "Advanced",
+        textInput(
+          "country", "Country code (optional)",
+          value = "", placeholder = "e.g. it, jp, br"
+        ),
+        fileInput(
+          "user_boundary", "Or upload your own boundary",
+          accept = c(".gpkg", ".geojson", ".json", ".zip"),
+          placeholder = "GeoPackage, GeoJSON or zipped shapefile"
+        ),
+        tags$div(
+          class = "text-muted small mb-2",
+          "Your polygon replaces the geocoding, e.g. for the dense city only.",
+          "A shapefile must be uploaded zipped (.zip)."
+        ),
+        selectInput(
+          "osm_source", "OSM data source",
+          choices = c(
+            "Automatic (Geofabrik, then Overpass)" = "auto",
+            "Geofabrik only"                       = "geofabrik",
+            "Overpass only (slow)"                 = "overpass"
+          ),
+          selected = "auto"
+        )
+      )
     ),
 
     hr(),
@@ -540,7 +575,7 @@ ui <- page_sidebar(
                 tags$p(
                   class = "text-muted small",
                   style = "margin:2px 0 0;",
-                  "Science, Craft, Innovation, Future, Technology"
+                  "Science, Climactivism, Imagination, Fostering Knowledge and Technology"
                 )
               )
             ),

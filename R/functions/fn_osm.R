@@ -2,10 +2,23 @@
 # fn_osm.R — OpenStreetMap data download
 # =============================================================================
 #
-# Provides download_osm(), which downloads the administrative boundary,
-# rural reference areas, and urban areas for a city from OpenStreetMap.
+# Provides download_osm(), which produces the administrative boundary
+# (boundaries.shp), rural reference areas (rural_areas.shp) and urban areas
+# (urban_areas.shp) for a city from OpenStreetMap.
 #
-# Download strategy:
+# Two strategies, chosen by `osm_source`:
+#   "auto"      (default) Geofabrik regional extract (fn_geofabrik.R); if it
+#               fails for any reason, the Overpass strategy below is used and
+#               the reason is logged.
+#   "geofabrik" Geofabrik only; errors are not caught.
+#   "overpass"  Overpass only (the strategy documented below).
+# Both read the same tag definitions (OSM_TAGS, fn_osm_tags.R) and write the
+# same files, so everything downstream is unchanged.
+#
+# The AOI normally arrives already resolved (resolve_aoi(), fn_geocode.R). The
+# Overpass strategy then skips its own admin_level 8/7/6 boundary queries.
+#
+# Overpass strategy:
 #   httr + raw OverpassQL POST, rotating across 3 mirrors, with explicit
 #   timeout and retry logic. No osmdata::osmdata_sf() — its internal retry
 #   backoff has no timeout and can hang 600+ seconds on large cities.
@@ -386,21 +399,21 @@ Sys.setenv(OSM_USE_CUSTOM_INDEXING = "NO")
 
 # ── Main function ─────────────────────────────────────────────────────────────
 
-#' Download OSM boundary, rural and urban areas
-#'
-#' @param city_name  Original city name string (with spaces)
-#' @param aoi_bb     Bounding box matrix from osmdata::getbb()
-#' @param dirs       Named list of project directories from setup()
-#'
-#' @return Named list: $aoi (SpatVector), $aoi_bb (matrix)
-download_osm <- function(city_name, aoi_bb, dirs) {
+# Overpass strategy (the original implementation of this file).
+.download_osm_overpass <- function(city_name, aoi_bb, dirs, aoi_res = NULL) {
 
-  cli::cli_h2("OSM data download")
+  cli::cli_h2("OSM data download (Overpass)")
 
   # ── Administrative boundary ───────────────────────────────────────────────
   bound_path <- file.path(dirs$input, "boundaries.shp")
 
-  if (file.exists(bound_path) && file.size(bound_path) > 100) {
+  if (!is.null(aoi_res)) {
+    # Already resolved by resolve_aoi(): no admin_level 8/7/6 queries needed.
+    aoi <- aoi_as_spatvector(aoi_res)
+    terra::writeVector(aoi, bound_path,
+      filetype = "ESRI Shapefile", overwrite = TRUE, options = "ENCODING=UTF-8")
+    cli::cli_alert_success("Saved: boundaries.shp ({aoi_res$source}, {round(aoi_res$area_km2)} km\u00b2)")
+  } else if (file.exists(bound_path) && file.size(bound_path) > 100) {
     cli::cli_alert_info("Administrative boundary: using cached boundaries.shp")
     aoi <- terra::vect(bound_path)
   } else {
@@ -475,11 +488,9 @@ download_osm <- function(city_name, aoi_bb, dirs) {
 
   if (!(file.exists(rural_areas_path) && file.size(rural_areas_path) > 100)) {
 
-    natural_values <- c("fell","grassland","heath","moor","scrub","shrubbery",
-                         "tree","tree_row","tree_stump","tundra","wood")
-    agri_values    <- c("farmland","paddy","flowerbed",
-                         "forest","meadow","orchard","grass")
-    leisure_values <- c("garden","golf_course","nature_reserve","park")
+    natural_values <- OSM_TAGS$rural$natural
+    agri_values    <- OSM_TAGS$rural$agri
+    leisure_values <- OSM_TAGS$rural$leisure
 
     .download_split_category(aoi_bb, "natural", natural_values,
       label_prefix = "rural: natural", file_prefix = "rural_cat_natural", dirs = dirs,
@@ -519,10 +530,7 @@ download_osm <- function(city_name, aoi_bb, dirs) {
   if (!(file.exists(urban_areas_path) && file.size(urban_areas_path) > 100)) {
 
     .download_feature("urban: general landuse", aoi_bb,
-      overpass_ql = .build_category_ql("landuse",
-        c("commercial","construction","education","fairground","industrial",
-          "residential","retail","institutional","railway","aerodrome",
-          "landfill","port","depot","quarry","military"), timeout = 300),
+      overpass_ql = .build_category_ql("landuse", OSM_TAGS$urban$landuse, timeout = 300),
       out_path = file.path(dirs$input, "urban_cat_landuse.shp"),
       nx = grid$nx, ny = grid$ny)
 
@@ -537,21 +545,12 @@ download_osm <- function(city_name, aoi_bb, dirs) {
       nx = grid$nx, ny = grid$ny)
 
     .download_feature("urban: leisure", aoi_bb,
-      overpass_ql = .build_category_ql("leisure",
-        c("adult_gaming_centre","amusement_arcade","bandstand","beach_resort",
-          "bleachers","bowling_alley","common","dance","disc_golf_course",
-          "fitness_centre","fitness_station","hackerspace","ice_rink","marina",
-          "miniature_golf","outdoor_seating","playground","resort","sauna",
-          "slipway","sports_centre","sport_hall","stadium","summer_camp",
-          "swimming_pool","tanning_salon","track","trampoline_park","water_park"),
-        timeout = 300),
+      overpass_ql = .build_category_ql("leisure", OSM_TAGS$urban$leisure, timeout = 300),
       out_path = file.path(dirs$input, "urban_cat_leisure.shp"),
       nx = grid$nx, ny = grid$ny)
 
     .download_feature("urban: aeroway", aoi_bb,
-      overpass_ql = .build_category_ql("aeroway",
-        c("aerodrome","apron","gate","hangar","spaceport","helipad",
-          "runway","taxiway","terminal"), timeout = 300),
+      overpass_ql = .build_category_ql("aeroway", OSM_TAGS$urban$aeroway, timeout = 300),
       out_path = file.path(dirs$input, "urban_cat_aeroway.shp"),
       nx = grid$nx, ny = grid$ny)
 
@@ -597,4 +596,93 @@ download_osm <- function(city_name, aoi_bb, dirs) {
 
   cli::cli_alert_success("OSM download complete.")
   list(aoi = aoi, aoi_bb = aoi_bb)
+}
+
+
+# ── Cache guard ───────────────────────────────────────────────────────────────
+# The OSM output files are named by city slug, not by AOI. If the AOI changes
+# between runs (another "Valencia", a different boundary, a new uploaded
+# polygon), cached files would silently describe the wrong area. A fingerprint
+# of the AOI is stored next to them; on mismatch they are deleted.
+# NOT invalidated here: the DEM and Landsat downloads, which are also cached by
+# slug. Delete the city folder when changing the AOI of an existing city.
+.osm_output_files <- function(dirs) {
+  base <- c("boundaries", "rural_areas", "urban_areas")
+  exts <- c(".shp", ".shx", ".dbf", ".prj", ".cpg")
+  f <- as.vector(outer(file.path(dirs$input, base), exts, paste0))
+  c(f, list.files(dirs$input, pattern = "^(rural|urban)_cat_.*\\.(shp|shx|dbf|prj|cpg)$",
+                  full.names = TRUE))
+}
+
+.osm_cache_matches <- function(dirs, aoi_res) {
+  fp_file <- file.path(dirs$input, "aoi_fingerprint.txt")
+  if (!file.exists(fp_file)) return(FALSE)
+  identical(readLines(fp_file, warn = FALSE)[1], aoi_fingerprint(aoi_res))
+}
+
+.osm_reset_cache <- function(dirs, aoi_res) {
+  fp_file <- file.path(dirs$input, "aoi_fingerprint.txt")
+  old <- Filter(file.exists, .osm_output_files(dirs))
+  if (length(old) > 0 || file.exists(fp_file)) {
+    if (length(old) > 0)
+      cli::cli_alert_warning("The AOI differs from the one used for the cached OSM files: deleting {length(old)} cached file(s).")
+    unlink(old)
+  }
+  writeLines(aoi_fingerprint(aoi_res), fp_file)
+}
+
+
+# ── Public entry point ────────────────────────────────────────────────────────
+
+#' Download OSM boundary, rural and urban areas
+#'
+#' @param city_name   Original city name string (with spaces)
+#' @param aoi_bb      Bounding box matrix (x/y by min/max)
+#' @param dirs        Named list of project directories from setup()
+#' @param aoi_res     Result of resolve_aoi() (recommended). If NULL, the
+#'                    original Overpass-only behaviour is used.
+#' @param osm_source  "auto" (Geofabrik, falling back to Overpass),
+#'                    "geofabrik" or "overpass"
+#' @param max_mb_single  Geofabrik: largest single extract before a mosaic
+#'
+#' @return Named list: $aoi (SpatVector), $aoi_bb (matrix), $strategy
+download_osm <- function(city_name, aoi_bb, dirs, aoi_res = NULL,
+                         osm_source = c("auto", "geofabrik", "overpass"),
+                         max_mb_single = 3000) {
+  osm_source <- match.arg(osm_source)
+
+  if (is.null(aoi_res)) {
+    if (osm_source == "geofabrik")
+      stop("The Geofabrik strategy needs a resolved AOI (aoi_res).", call. = FALSE)
+    res <- .download_osm_overpass(city_name, aoi_bb, dirs)
+    res$strategy <- "overpass"
+    return(res)
+  }
+
+  bound_path <- file.path(dirs$input, "boundaries.shp")
+  rural_path <- file.path(dirs$input, "rural_areas.shp")
+  urban_path <- file.path(dirs$input, "urban_areas.shp")
+
+  if (.osm_cache_matches(dirs, aoi_res) &&
+      all(file.exists(c(bound_path, rural_path, urban_path))) &&
+      all(file.size(c(bound_path, rural_path, urban_path)) > 100)) {
+    cli::cli_alert_info("OSM files already on disk for this AOI: skipped.")
+    return(list(aoi = terra::vect(bound_path), aoi_bb = aoi_res$aoi_bb, strategy = "cache"))
+  }
+  .osm_reset_cache(dirs, aoi_res)
+
+  if (osm_source %in% c("auto", "geofabrik")) {
+    run <- function() download_osm_geofabrik(aoi_res, dirs, max_mb_single = max_mb_single)
+    res <- if (osm_source == "geofabrik") run() else tryCatch(run(), error = function(e) {
+      cli::cli_alert_danger("Geofabrik strategy failed: {conditionMessage(e)}")
+      cli::cli_alert_warning("Falling back to Overpass (slower, may leave gaps).")
+      NULL
+    })
+    if (!is.null(res)) { res$strategy <- "geofabrik"; return(res) }
+    .osm_reset_cache(dirs, aoi_res)   # discard anything half-written by the failed attempt
+  }
+
+  res <- .download_osm_overpass(city_name, aoi_bb, dirs, aoi_res = aoi_res)
+  res$strategy <- "overpass"
+  res
 }

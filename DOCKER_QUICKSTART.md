@@ -79,8 +79,10 @@ You'll see the SUHII Mapping Tool interface.
 
 ## Step 5 — Run your analysis
 
-1. **Enter a city name** — use the name as it appears on OpenStreetMap
-   (e.g. `Florence`, `Bologna`, `Berlin`, `São Paulo`)
+1. **Enter a city name** — capitals, accents and small typos are tolerated
+   (e.g. `Florence`, `Bologna`, `Berlin`, `São Paulo`). For homonyms add the
+   region or country: `Phoenix, Arizona`, `Valencia, Spain`. A map of the study
+   area then appears: check it and confirm.
 2. **Choose the season** — `warm` for summer heat island analysis
 3. **Set cloud cover threshold** — 30% is a good default
 4. **Click Run analysis**
@@ -135,8 +137,9 @@ Your data is preserved in the `data/` folder.
 
 ## Troubleshooting
 
-**"Cannot geocode city"**
-→ Try the city's name in the local language, or as it appears on
+**"No populated place found" / "is ambiguous"**
+→ Add the region or country (`Springfield, Illinois`), try the name in the local
+language, or upload your own boundary under *Advanced*. Check on
 [openstreetmap.org](https://www.openstreetmap.org/).
 
 **"OpenTopography API key missing"**
