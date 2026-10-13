@@ -15,8 +15,10 @@
 #     checked against ALL OSM names of the place (name, name:en, name:ja, ...),
 #     so "Tokyo" can match an entry whose main name is in Japanese.
 #   * Every candidate is VALIDATED, and the tool stops loudly rather than
-#     guessing: a plausible but wrong place is the worst failure mode here,
-#     because it is only discovered after an hour of downloads.
+#     guessing when the candidate itself is doubtful (ambiguous names). The
+#     user also confirms the boundary on a map before anything is downloaded.
+#   * Locating the municipality must never depend on Overpass: Overpass is only
+#     a second-source check and never blocks the workflow by default.
 #
 # Resolution chain
 #   1. Nominatim, as a ladder: free text -> featureType=city -> featureType=
@@ -28,10 +30,16 @@
 #   3. Ambiguity check: several valid places far apart (Valencia, Springfield).
 #      A clearly larger settlement type wins (Phoenix: city vs. villages);
 #      otherwise the function stops and returns the candidates.
-#   4. Second source: Overpass `is_in` lists the administrative boundaries that
-#      contain the candidate's point. A boundary with a similar name must exist
-#      ("consensus"). If the candidate was only a node, that boundary relation
-#      is used for the polygon ("promotion").
+#   4. Second source (NON-BLOCKING by default): Overpass `is_in` lists the
+#      administrative boundaries that contain the candidate's point.
+#        consensus / consensus-promoted : a boundary with a similar name exists
+#                                         (if the candidate was only a node,
+#                                         that relation is used for the polygon)
+#        no-match   : Overpass lists boundaries but none has a similar name
+#                     -> warning (stop only if require_consensus = TRUE)
+#        unverified : Overpass unreachable, invalid or EMPTY answer
+#                     -> warning only (an empty answer is a degraded server:
+#                        any point on land lies in some administrative boundary)
 #   5. Polygon: Nominatim /lookup; for nodes without a boundary, Nominatim
 #      /reverse (zoom 10, then 12) with a name check. Only the main polygon and
 #      the parts within `parts_radius_km` of it count towards the bbox (far
@@ -41,7 +49,9 @@
 #
 # Error classes (so the caller / Shiny app can react):
 #   suhii_ambiguous  : $candidates holds the valid candidates (column `id`)
-#   suhii_unverified : Overpass answered but knows no boundary with that name
+#   suhii_unverified : (a) require_consensus = TRUE and Overpass lists
+#                      boundaries but none with a similar name; or (b) no
+#                      polygon available and the bbox spans more than 3 degrees
 #   suhii_not_found  : nothing found even after spelling suggestions
 #
 # Known limits (not verified for every country): Nominatim's classification of
@@ -241,13 +251,19 @@
 }
 
 # Which administrative boundaries contain the candidate's point, and does one of
-# them carry a name similar to `core`? Returns list(status, relation_id).
+# them carry a name similar to `core`? Returns list(status, relation_id, detail).
 #   status: "consensus" | "consensus-promoted" | "no-match" | "unverified"
+#
+# An EMPTY answer is "unverified", not "no-match": a point on land always lies
+# inside at least one administrative boundary (country, region, ...), so an
+# empty `elements` array means a degraded server, not a wrong name. "no-match"
+# is reserved for answers that list boundaries none of which is named like the
+# requested place; the names found are returned in `detail`.
 .overpass_verify <- function(lat, lon, osm_type, osm_id, core) {
   q <- sprintf(
     '[out:json][timeout:60];is_in(%.6f,%.6f)->.a;rel(pivot.a)["boundary"="administrative"];out tags;',
     lat, lon)
-  txt <- .overpass_post_json(q)
+  txt <- .overpass_post_json(q, attempts = 3)
   if (is.null(txt)) return(list(status = "unverified", relation_id = NA,
                                 detail = "Overpass unreachable"))
   el <- tryCatch(jsonlite::fromJSON(txt, simplifyVector = FALSE)$elements,
@@ -255,13 +271,22 @@
   if (is.null(el)) return(list(status = "unverified", relation_id = NA,
                                detail = "invalid Overpass answer"))
 
+  if (length(el) == 0)
+    return(list(status = "unverified", relation_id = NA,
+                detail = "empty Overpass answer (a point on land always lies in some administrative boundary)"))
+
   hit <- Filter(function(e) {
     t <- e$tags
     k <- names(t)[grepl("^(name|int_name|official_name|alt_name)", names(t))]
     length(k) > 0 && .any_similar(unlist(t[k]), core)
   }, el)
-  if (length(hit) == 0) return(list(status = "no-match", relation_id = NA,
-                                    detail = "no boundary with a similar name contains the point"))
+
+  if (length(hit) == 0) {
+    found <- unique(unlist(lapply(el, function(e) e$tags$name)))
+    found <- if (length(found) > 0) paste(found, collapse = ", ") else "no named boundary"
+    return(list(status = "no-match", relation_id = NA,
+                detail = paste0("boundaries at this point: ", found)))
+  }
 
   if (osm_type == "relation" && any(vapply(hit, function(e) e$id == osm_id, logical(1))))
     return(list(status = "consensus", relation_id = osm_id, detail = "same object"))
@@ -376,9 +401,10 @@
 #'                           geocoding entirely
 #' @param choice             Optional candidate to force: an `id` such as
 #'                           "relation:111257" (as listed in the ambiguity error)
-#' @param require_consensus  If TRUE, stop when Overpass answers but knows no
-#'                           boundary with a similar name. Overpass being
-#'                           unreachable only warns ("unverified").
+#' @param require_consensus  If TRUE, stop when Overpass lists boundaries at the
+#'                           candidate's point but none has a similar name.
+#'                           Default FALSE: that case only warns. An empty or
+#'                           unavailable Overpass answer never stops (warning).
 #' @param parts_radius_km    Polygon parts farther than this from the main part
 #'                           (islands) are ignored for bbox and AOI
 #' @param warn_km2           Informational threshold only; nothing is excluded
@@ -388,7 +414,7 @@
 #'         bbox_synthetic, source, osm_id, verification, area_km2, step,
 #'         query, warnings (character), candidates (data.frame)
 resolve_aoi <- function(city, country = NULL, user_polygon = NULL, choice = NULL,
-                        require_consensus = TRUE, parts_radius_km = 25,
+                        require_consensus = FALSE, parts_radius_km = 25,
                         warn_km2 = 20000) {
 
   warns <- character(0)
@@ -456,20 +482,24 @@ resolve_aoi <- function(city, country = NULL, user_polygon = NULL, choice = NULL
   cli::cli_alert_success("Candidate: {cand$nome} ({cand$addresstype}, {cand$id})")
 
   # ── 3. Second source: Overpass boundaries containing the point ─────────────
+  # Non-blocking by default: locating the municipality must not depend on
+  # Overpass (see header). The user still confirms the boundary on a map.
   ver <- .overpass_verify(cand$lat, cand$lon, cand$osm_type, cand$osm_id, core)
   verification <- switch(ver$status,
     "consensus"          = "confirmed by Overpass (same object)",
     "consensus-promoted" = paste("confirmed by Overpass:", ver$detail),
     "unverified"         = paste("NOT verified:", ver$detail),
-    "no-match"           = "Overpass found no boundary with this name")
+    "no-match"           = paste("NOT confirmed by Overpass:", ver$detail))
   cli::cli_alert_info("Verification: {verification}")
 
-  if (ver$status == "no-match" && require_consensus && is.null(choice)) {
-    .stop_cls("suhii_unverified", paste0(
-      "Overpass answered but knows no administrative boundary named like '", core,
-      "' at the chosen point: the candidate may be wrong. ",
-      "Add the region or country, or upload your own boundary."),
-      candidates = tab[tab$ok, , drop = FALSE])
+  if (ver$status == "no-match") {
+    if (require_consensus && is.null(choice))
+      .stop_cls("suhii_unverified", paste0(
+        "Overpass lists boundaries at the chosen point but none named like '", core,
+        "' (", ver$detail, "). Add the region or country, or upload your own boundary."),
+        candidates = tab[tab$ok, , drop = FALSE])
+    add_warn(sprintf("Second-source check: no boundary named like '%s' (%s). Check the AOI preview.",
+                     core, ver$detail))
   }
   if (ver$status == "unverified")
     add_warn("Second-source check (Overpass) unavailable: the place was not cross-checked.")
