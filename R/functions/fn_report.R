@@ -4,6 +4,16 @@
 #
 # Provides render_report(), which renders report/report_template.qmd into
 # a self-contained HTML file using Quarto.
+#
+# Patch notes (vs. previous version):
+#   * The error handler no longer builds a cli string that contains a glue
+#     expression with escaped quotes inside {...}: that raised
+#     "Expecting '}'" and hid the real Quarto error. Strings that need R code
+#     are now computed BEFORE the cli call and interpolated as plain values.
+#   * cli_alert_*() takes ONE string: vectors with names ("i" = ...) are for
+#     cli_bullets()/cli_abort(), here they were concatenated without separators.
+#   * The temporary render directory is deleted only on success, so after a
+#     failure the .qmd can be re-rendered by hand and inspected.
 # =============================================================================
 
 
@@ -28,11 +38,9 @@ render_report <- function(city_name, city_slug, dirs,
   cli::cli_h2("HTML report")
 
   if (!nzchar(Sys.which("quarto"))) {
-    cli::cli_alert_warning(c(
-      "Quarto not found — report not generated.",
-      "i" = "Install from https://quarto.org/docs/get-started/",
-      "i" = "All other outputs (rasters, CSV, GeoJSON) are complete."
-    ))
+    cli::cli_alert_warning("Quarto not found — report not generated.")
+    cli::cli_alert_info("Install from https://quarto.org/docs/get-started/")
+    cli::cli_alert_info("All other outputs (rasters, CSV, GeoJSON) are complete.")
     return(invisible(NULL))
   }
 
@@ -51,14 +59,16 @@ render_report <- function(city_name, city_slug, dirs,
     file.copy(file.path(report_src, f), file.path(render_dir, f), overwrite = TRUE)
   }
 
+  qmd_path        <- file.path(render_dir, "report_template.qmd")
   report_filename <- sprintf("%s_%s_%d_report.html", city_slug, season, year)
   report_out_path <- file.path(dirs$output, report_filename)
+  render_ok       <- FALSE
 
   cli::cli_alert_info("Rendering {report_filename} (1–3 min)...")
 
   tryCatch({
     quarto::quarto_render(
-      input          = file.path(render_dir, "report_template.qmd"),
+      input          = qmd_path,
       output_format  = "html",
       output_file    = report_filename,
       execute_params = list(
@@ -87,19 +97,22 @@ render_report <- function(city_name, city_slug, dirs,
       }
     }
     if (file.exists(report_out_path)) {
+      render_ok <- TRUE
       cli::cli_alert_success("Report ready: {report_out_path}")
       cli::cli_alert_info('Open with: browseURL("{report_out_path}")')
     } else {
       cli::cli_alert_warning("Report file not found after rendering.")
     }
   }, error = function(e) {
-    cli::cli_alert_warning(c(
-      "Report rendering failed: {e$message}",
-      "i" = "All other outputs are still complete.",
-      "i" = 'Render manually: quarto::quarto_render("{file.path(render_dir, \\"report_template.qmd\\")}")'
-    ))
+    # Plain values only: never put R code with quotes inside {...} here.
+    msg <- conditionMessage(e)
+    cat("\n[report] Quarto render error (raw):\n", msg, "\n", sep = "")
+    cli::cli_alert_warning("Report rendering failed: {msg}")
+    cli::cli_alert_info("All other outputs are still complete.")
+    cli::cli_alert_info("Render manually, input file kept at: {qmd_path}")
   })
 
-  unlink(render_dir, recursive = TRUE)
+  # Keep the render dir after a failure, so the .qmd can be inspected/re-run
+  if (render_ok) unlink(render_dir, recursive = TRUE)
   invisible(report_out_path)
 }
