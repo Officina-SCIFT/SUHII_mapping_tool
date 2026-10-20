@@ -15,6 +15,13 @@ library(bslib)
 library(leaflet)
 library(plotly)
 
+# Single source of truth for the user feedback form (used in the header pill,
+# the sidebar button and the About tab).
+FEEDBACK_URL <- paste0(
+  "https://docs.google.com/forms/d/e/",
+  "1FAIpQLScuYIyojP9iiTP3vjk2wFNVpeEuBwITrGmT-Cp-hU-JH-i7mw/viewform?usp=sf_link"
+)
+
 ui <- page_sidebar(
 
   # ── Theme ──────────────────────────────────────────────────────────────────
@@ -148,8 +155,33 @@ ui <- page_sidebar(
       padding-top: 12px;
       margin-top: 8px;
     }
+    /* Feedback: fixed pill in the header + sidebar button */
+    .feedback-pill {
+      position: fixed; top: 10px; right: 18px; z-index: 1100;
+      display: flex; align-items: center; gap: 6px;
+      background: #000; border: 1px solid #5b9bd5; border-radius: 999px;
+      color: #8fbfe8 !important; font-size: 0.8rem; font-weight: 500;
+      padding: 5px 12px; text-decoration: none;
+    }
+    .feedback-pill:hover { background: #1a2535; color: #aad4f5 !important; }
+    @media (max-width: 600px) { .feedback-pill span { display: none; } }
+    .feedback-btn {
+      border: 1px solid #5b9bd5 !important; color: #8fbfe8 !important;
+      background: transparent; font-weight: 500;
+    }
+    .feedback-btn:hover { background: #1a2535 !important; color: #aad4f5 !important; }
   ")))
 ,
+  # Feedback pill — fixed top right, visible on every tab
+  tags$a(
+    class  = "feedback-pill",
+    href   = FEEDBACK_URL,
+    target = "_blank",
+    rel    = "noopener",
+    title  = "Share your feedback",
+    icon("comment-dots"),
+    tags$span("Feedback")
+  ),
   # ── Sidebar ────────────────────────────────────────────────────────────────
   sidebar = sidebar(
     width = 320,
@@ -165,7 +197,7 @@ ui <- page_sidebar(
       class = "alert alert-info py-2 px-3 small mb-2",
       tags$strong("First time?"), " Read the ",
       tags$a("Quick Start Guide",
-        href   = "https://github.com/Officina-SCIFT/SUHII_mapping/blob/main/DOCKER_QUICKSTART.md",
+        href   = "https://github.com/Officina-SCIFT/SUHII_mapping_tool/blob/main/DOCKER_QUICKSTART.md",
         target = "_blank"),
       ". An OpenTopography API key is required (free)."
     ),
@@ -234,6 +266,15 @@ ui <- page_sidebar(
 
     # Status indicator
     uiOutput("status_badge"),
+
+    # Feedback shortcut (also available in the header and in the About tab)
+    tags$a(
+      class  = "btn btn-sm w-100 mt-2 feedback-btn",
+      href   = FEEDBACK_URL,
+      target = "_blank",
+      rel    = "noopener",
+      icon("comment-dots"), " Share feedback"
+    ),
 
     hr(),
 
@@ -466,7 +507,72 @@ ui <- page_sidebar(
       value = "about",
 
       layout_columns(
-        col_widths = c(8, 4),
+        col_widths = c(8, 4, 8, 4, 8, 4),
+
+        # Disclaimer / how to cite
+        card(
+          card_header("Disclaimer"),
+          card_body(
+            tags$p(
+              "All outputs are based on the associated peer-reviewed publication.",
+              "Any use — for analysis, modelling, visualisation, or integration",
+              "into other projects — ", tags$strong("must cite the original paper"), ":"
+            ),
+            tags$blockquote(
+              class = "border-start ps-3 mb-0",
+              style = "border-color:#444 !important; font-size:0.9rem;",
+              "Richiardi, C., Caroscio, L., Crescini, E., De Marchi, M.,",
+              "De Pieri, G. M., Ceresi, C., Baldo, F., Francobaldi, M., &",
+              "Pappalardo, S. E. (2025). A global downstream approach to mapping",
+              "surface urban heat islands using open data and collaborative technology. ",
+              tags$em("Sustainable Geosciences: People, Planet and Prosperity"),
+              ", 100006. ",
+              tags$a("https://doi.org/10.1016/j.susgeo.2025.100006",
+                     href   = "https://doi.org/10.1016/j.susgeo.2025.100006",
+                     target = "_blank")
+            )
+          )
+        ),
+
+        # Feedback — highlighted card, first row next to the disclaimer
+        card(
+          style = "border:1px solid #5b9bd5 !important;",
+          card_body(
+            tags$div(
+              class = "d-flex align-items-center gap-2 mb-1",
+              icon("comment-dots", style = "color:#7eb8e8; font-size:1.1rem;"),
+              tags$span(
+                "Share your feedback",
+                style = "font-size:1.05rem; font-weight:600; color:#e8e8e8;"
+              )
+            ),
+            tags$p(
+              class = "text-muted small mb-3",
+              "We would love to hear how you are using this tool."
+            ),
+            tags$a(
+              href   = FEEDBACK_URL,
+              target = "_blank",
+              class  = "btn w-100",
+              style  = paste(
+                "background:#fff !important; color:#000 !important;",
+                "border:none; font-weight:600; letter-spacing:0.02em;"
+              ),
+              "Fill out the feedback form"
+            ),
+            tags$p(
+              class = "text-muted small mt-3 mb-0",
+              "Want to contribute with code, ideas, or data? Open an issue or submit a",
+              "pull request on ",
+              tags$a(
+                href   = "https://github.com/Officina-SCIFT/SUHII_mapping_tool",
+                target = "_blank",
+                "GitHub"
+              ),
+              "."
+            )
+          )
+        ),
 
         card(
           card_header("What this tool measures — and what it does not"),
@@ -556,9 +662,9 @@ ui <- page_sidebar(
           )
         ),
 
-        # SCIFT card
+        # Project card
         card(
-          card_header("Developed by"),
+          card_header("Project"),
           card_body(
             tags$div(
               class = "d-flex align-items-center gap-3 mb-3",
@@ -575,45 +681,97 @@ ui <- page_sidebar(
                 tags$p(
                   class = "text-muted small",
                   style = "margin:2px 0 0;",
-                  "Science, Climactivism, Imagination, Fostering Knowledge and Technology"
+                  "Laboratory of Science, Climactivism, Imagination,",
+                  "Fostering Knowledge and Technology"
                 )
               )
             ),
+            tags$p(
+              "This tool was born within ",
+              tags$a("SCIFT", href = "https://municipiozero.it/scift/", target = "_blank"),
+              " — a collaborative space between academic research and social and",
+              "territorial activism, based in Bologna (Vicolo Bolognetti 2) with a",
+              "global vocation."
+            ),
+            tags$p(
+              "SCIFT was founded in 2024, emerging from the meeting of a group of PhD",
+              "students and citizens at the ", tags$em("Reclaim The Tech"), " festival in",
+              "Bologna — a festival dedicated to the conscious reappropriation of",
+              "technology. From that encounter came the idea of a participatory",
+              "initiative to tackle the growing problem of Urban Heat Islands through a",
+              "digital platform based on open data, enabling citizens, researchers,",
+              "planners, and administrators to work together to monitor and respond to",
+              "UHI effects."
+            ),
+            tags$h6("What the name stands for", class = "text-primary mt-3"),
+            tags$p(
+              class = "text-muted small mb-2",
+              "The name is not just an acronym — it reflects a precise vision:"
+            ),
             tags$ul(
-              class = "list-unstyled small",
+              class = "small",
+              tags$li(tags$strong("Science"),
+                " — open, democratic, and accessible, oriented toward social and climate justice"),
+              tags$li(tags$strong("Climactivism"),
+                " — collective political action that goes beyond the narrative of the climate crisis"),
+              tags$li(tags$strong("Imagination"),
+                " — a central political practice for building alternative futures"),
+              tags$li(tags$strong("Fostering Knowledge"),
+                " — horizontal, situated education as a common good"),
+              tags$li(tags$strong("Technology"),
+                " — critically reappropriated, not delegated blindly to “technological progress”")
+            ),
+            tags$hr(),
+            tags$h6("Open source", class = "text-primary"),
+            tags$p(
+              class = "small mb-0",
+              "Released under the ", tags$strong("GNU General Public License v3.0 (GPL 3.0)"),
+              ". Aligns with ", tags$strong("SDG 11"), " (Sustainable Cities) and ",
+              tags$strong("SDG 17"), " (Partnerships for the Goals).",
+              "All code, data processing steps, and documentation are openly shared to",
+              "facilitate collaboration across research institutions, policy sectors,",
+              "and geographic regions. ",
+              tags$a(
+                href   = "https://github.com/Officina-SCIFT/SUHII_mapping_tool",
+                target = "_blank",
+                icon("github"), " GitHub repository"
+              )
+            )
+          )
+        ),
+
+        # Acknowledgements card
+        card(
+          card_header("Acknowledgements"),
+          card_body(
+            tags$p(
+              class = "small",
+              "Developed by ",
+              tags$a("SCIFT", href = "https://municipiozero.it/scift/", target = "_blank"),
+              " — Laboratory of Science, Climactivism, Imagination,",
+              "Fostering Knowledge and Technology."
+            ),
+            tags$ul(
+              class = "list-unstyled small mb-0",
               tags$li(
-                tags$i(class="fa fa-map-marker", `aria-hidden`="true"), " Italy"
-              ),
-              tags$li(class="mt-1",
                 tags$a(
                   href   = "https://municipiozero.it/scift/",
                   target = "_blank",
-                  "municipiozero.it/scift"
+                  icon("globe"), " municipiozero.it/scift"
                 )
               ),
-              tags$li(class="mt-1",
+              tags$li(class = "mt-1",
                 tags$a(
                   href   = "https://www.instagram.com/scift_officina/",
                   target = "_blank",
-                  icon("instagram"), " scift_officina"
+                  icon("instagram"), " @scift_officina"
                 )
               ),
-              tags$li(class="mt-1",
+              tags$li(class = "mt-1",
                 tags$a(
-                  href = "mailto:sciftofficina@protonmail.com",
-                  icon("envelope"), " sciftofficina@protonmail.com"
+                  href = "mailto:scift@gmail.com",
+                  icon("envelope"), " scift@gmail.com"
                 )
-              )
-            ),
-            tags$hr(),
-            tags$p(
-              class = "text-muted small mb-0",
-              "This tool is open source and released under the GNU GPL v3 licence.",
-              tags$br(),
-              tags$a(
-                href   = "https://github.com/Officina-SCIFT/SUHII_mapping",
-                target = "_blank",
-                icon("github"), " GitHub repository"
               )
             )
           )
